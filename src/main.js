@@ -29,13 +29,13 @@ const YEAR_BAND_COLORS = ['#2F7060', '#1E4F44', '#133933', '#082823', '#2F7060',
 const QUARTER_CELL_COLORS = ['#EFF6F3', '#DCEBE6', '#BCD8D0', '#9CC4B8', '#EFF6F3', '#DCEBE6'];
 
 const LEGEND_DEFAULTS = [
-  {id:'ongoing', label:'Pågående', color:'#888780'},
+  {id:'ongoing', label:'Ongoing', color:'#888780'},
   {id:'committed', label:'Committed', color:'#378ADD'},
-  {id:'priority', label:'Prioriterat', color:'#1D9E75'},
-  {id:'maybe', label:'Eventuellt', color:'#BA7517'},
-  {id:'growth', label:'Tillväxt', color:'#7F77DD'},
-  {id:'dependency', label:'Beroende', color:'#A32D2D', dashed:true},
-  {id:'new', label:'Nytt', color:'#D85A30'}
+  {id:'priority', label:'Prioritised', color:'#1D9E75'},
+  {id:'maybe', label:'Maybe', color:'#BA7517'},
+  {id:'growth', label:'Growth', color:'#7F77DD'},
+  {id:'dependency', label:'Dependency', color:'#A32D2D', dashed:true},
+  {id:'new', label:'New', color:'#D85A30'}
 ];
 
 // ----- State -----
@@ -253,7 +253,7 @@ async function loadFromFile(path){
     render();
   } catch(e){
     console.error("[Roadmap] load failed:", e);
-    alert("Kunde inte öppna filen: " + e);
+    alert("Could not open file: " + e);
   }
 }
 
@@ -331,7 +331,7 @@ async function renderWelcomeRecent(){
 function render(){
   invalidateCache();
   const addYearBtn = document.getElementById('add-year');
-  if(addYearBtn) addYearBtn.textContent = '+ Lägg till år ' + (state.config.endYear + 1);
+  if(addYearBtn) addYearBtn.textContent = '+ Add year ' + (state.config.endYear + 1);
   renderGrid();
   renderEditPanel();
   renderLegend();
@@ -365,7 +365,7 @@ function renderGrid(){
       const rm = document.createElement('button');
       rm.className = 'year-remove';
       rm.textContent = '×';
-      rm.title = 'Ta bort år ' + y.label + ' (tomt)';
+      rm.title = 'Remove year ' + y.label + ' (empty)';
       rm.addEventListener('click', e => {
         e.stopPropagation();
         removeYearConfirm(y);
@@ -377,7 +377,7 @@ function renderGrid(){
       const add = document.createElement('button');
       add.className = 'year-add';
       add.textContent = '+';
-      add.title = 'Lägg till år ' + (state.config.endYear + 1);
+      add.title = 'Add year ' + (state.config.endYear + 1);
       add.addEventListener('click', e => {
         e.stopPropagation();
         addYearAtEnd();
@@ -403,7 +403,7 @@ function renderGrid(){
 
   const blank = document.createElement('div');
   blank.className = 'gh sticky-col';
-  blank.textContent = 'Initiativ';
+  blank.textContent = 'Initiative';
   blank.style.textAlign = 'left';
   blank.style.paddingLeft = '12px';
   grid.appendChild(blank);
@@ -533,13 +533,13 @@ function renderGrid(){
     });
   });
 
-  // Ghost row: "+ Lägg till initiativ" at the end of the grid
+  // Ghost row: "+ Add initiative" at the end of the grid
   const ghostLc = document.createElement('div');
   ghostLc.className = 'lbl-cell ghost-cell';
   const ghostLi = document.createElement('div');
   ghostLi.className = 'row-label ghost-row';
-  ghostLi.textContent = '+ Lägg till initiativ';
-  ghostLi.title = 'Lägg till ett nytt initiativ';
+  ghostLi.textContent = '+ Add initiative';
+  ghostLi.title = 'Add a new initiative';
   ghostLi.addEventListener('click', addInit);
   ghostLc.appendChild(ghostLi);
   grid.appendChild(ghostLc);
@@ -557,7 +557,7 @@ function renderGrid(){
   const resizeHandle = document.createElement('div');
   resizeHandle.className = 'label-resize-handle';
   resizeHandle.style.left = (labelW - 3) + 'px';
-  resizeHandle.title = 'Dra för att ändra bredden på etikett-kolumnen';
+  resizeHandle.title = 'Drag to change the width of the label column';
   resizeHandle.addEventListener('mousedown', onLabelResizeStart);
   wrap.appendChild(resizeHandle);
 }
@@ -797,7 +797,7 @@ function renderLegend(){
     swWrap.style.cssText = 'position:relative;display:inline-flex;align-items:center;flex-shrink:0';
     const sw = document.createElement('span');
     sw.className = 'legend-sw';
-    sw.title = 'Klicka för att ändra färg';
+    sw.title = 'Click to change colour';
     if(lg.dashed){
       sw.style.border = '1.5px dashed ' + lg.color;
       sw.style.background = 'transparent';
@@ -836,7 +836,7 @@ function renderLegend(){
     const remove = document.createElement('button');
     remove.className = 'legend-item-remove';
     remove.textContent = '×';
-    remove.title = 'Ta bort etikett "' + lg.label + '"';
+    remove.title = 'Remove label "' + lg.label + '"';
     remove.addEventListener('click', e => {
       e.stopPropagation();
       removeLegendConfirm(lg);
@@ -858,13 +858,13 @@ function renderLegend(){
 
   const addBtn = document.createElement('button');
   addBtn.className = 'legend-add-btn';
-  addBtn.textContent = '+ Lägg till etikett';
+  addBtn.textContent = '+ Add label';
   addBtn.addEventListener('click', openLegendAdd);
   legend.appendChild(addBtn);
 
   const hint = document.createElement('span');
   hint.className = 'legend-edit-hint';
-  hint.textContent = 'klicka för att byta etikett';
+  hint.textContent = 'click to edit label';
   legend.appendChild(hint);
 }
 
@@ -898,11 +898,11 @@ function saveLegendAdd(){
 
 function removeLegendConfirm(lg){
   const usingInits = state.initiatives.filter(i => i.type === lg.id);
-  let body = 'Är du säker på att du vill ta bort etiketten "' + lg.label + '"?';
+  let body = 'Are you sure you want to delete the label "' + lg.label + '"?';
   if(usingInits.length > 0){
-    body += ' ' + usingInits.length + ' initiativ använder denna etikett och tilldelas första kvarvarande etikett.';
+    body += ' ' + usingInits.length + ' initiative(s) use this label and will be reassigned to the first remaining one.';
   }
-  confirmAction('Ta bort etikett', body, () => {
+  confirmAction('Delete label', body, () => {
     const idx = state.legend.findIndex(x => x.id === lg.id);
     if(idx === -1) return;
     state.legend.splice(idx, 1);
@@ -987,7 +987,7 @@ function updatePreview(){
   const p = init.position || {s:0,e:0};
   const inRange = p.s >= 0 && p.e < qs.length;
   const fmt = m => m.label + ' ' + m.year;
-  const t = inRange ? (fmt(qs[p.s]) + (p.s !== p.e ? ' - ' + fmt(qs[p.e]) : '')) : 'utanför tidsram';
+  const t = inRange ? (fmt(qs[p.s]) + (p.s !== p.e ? ' - ' + fmt(qs[p.e]) : '')) : 'outside timeline';
   const addRow = (labelText, valueText) => {
     const r = document.createElement('div');
     r.className = 'preview-row';
@@ -999,9 +999,9 @@ function updatePreview(){
     r.appendChild(right);
     rows.appendChild(r);
   };
-  addRow('Tidsperiod', t);
+  addRow('Time period', t);
   const deps = (document.getElementById('deps-input').value || '').trim();
-  if(deps) addRow('Beroenden', deps);
+  if(deps) addRow('Dependencies', deps);
 }
 
 function applyChanges(){
@@ -1024,8 +1024,8 @@ function applyChanges(){
 function deleteInit(){
   const init = findInit(state.selected);
   if(!init) return;
-  confirmAction('Ta bort initiativ',
-    'Är du säker på att du vill ta bort "' + init.label + '"? Detta går inte att ångra.',
+  confirmAction('Delete initiative',
+    'Are you sure you want to delete "' + init.label + '"? This cannot be undone.',
     () => {
       state.initiatives = state.initiatives.filter(x => x.id !== state.selected);
       state.selected = null;
@@ -1038,7 +1038,7 @@ function addInit(){
   const qs = months();
   const startPos = Math.min(qs.length - 1, Math.floor(qs.length / 2));
   const newInit = {
-    id, label:'Nytt initiativ',
+    id, label:'New initiative',
     position: {s:startPos, e:startPos},
     type: state.legend[0] ? state.legend[0].id : 'new',
     adjustable: true, weeks: null,
@@ -1057,8 +1057,8 @@ function addInit(){
 }
 
 function removeYearConfirm(yearGroup){
-  confirmAction('Ta bort år ' + yearGroup.label,
-    'Året är tomt och kommer tas bort från tidslinjen. Vill du fortsätta?',
+  confirmAction('Remove year ' + yearGroup.label,
+    'The year is empty and will be removed from the timeline. Continue?',
     () => { removeYear(yearGroup); });
 }
 
@@ -1129,7 +1129,7 @@ async function menuExportHtml(){
 async function menuExportSvg(){
   try {
     if(state.initiatives.length === 0){
-      alert("Roadmapen är tom - inget att exportera.");
+      alert("The roadmap is empty - nothing to export.");
       return;
     }
     const defaultName = (basenameOf(currentFilePath) || 'roadmap') + '.svg';
@@ -1139,7 +1139,7 @@ async function menuExportSvg(){
     await invoke('write_svg_file', { path, contents: svg });
   } catch(e){
     console.error("[Roadmap] SVG export failed:", e);
-    alert("Kunde inte exportera SVG: " + (e && e.message ? e.message : e));
+    alert("Could not export SVG: " + (e && e.message ? e.message : e));
   }
 }
 
@@ -1287,7 +1287,7 @@ function generateExportSvg(){
   // Month header row
   {
     const mhY = gridY + YEAR_H + QUARTER_H;
-    parts.push(`<text x="${gridX + 12}" y="${mhY + MONTH_H / 2}" font-size="11" font-weight="600" fill="${C.text2}" dominant-baseline="central">Initiativ</text>`);
+    parts.push(`<text x="${gridX + 12}" y="${mhY + MONTH_H / 2}" font-size="11" font-weight="600" fill="${C.text2}" dominant-baseline="central">Initiative</text>`);
     let cx = gridX + LABEL_W, yearIdx = 0, used = 0;
     ms.forEach(m => {
       if(used >= ys[yearIdx].span){ yearIdx++; used = 0; }

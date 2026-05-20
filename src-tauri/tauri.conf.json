@@ -38,13 +38,13 @@
       "icons/icon.ico"
     ],
     "category": "Productivity",
-    "shortDescription": "Interaktiv roadmap-vy",
-    "longDescription": "Skapa och redigera produkt-roadmaps med drag-and-drop, flera scenarier och flexibla etiketter.",
+    "shortDescription": "Interactive roadmap view",
+    "longDescription": "Create and edit product roadmaps with drag-and-drop, multiple scenarios and flexible labels.",
     "fileAssociations": [
       {
         "ext": ["roadmap"],
         "name": "Roadmap Document",
-        "description": "Roadmap-fil",
+        "description": "Roadmap file",
         "role": "Editor",
         "mimeType": "application/x-roadmap"
       }

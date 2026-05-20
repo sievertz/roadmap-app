@@ -185,7 +185,7 @@ body:has(.welcome.active) .gantt-actions{display:none}
 .year-add{background:rgba(255,255,255,0.18);border:none;color:#ffffff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;padding:0;line-height:1;font-family:inherit;opacity:0.7;transition:opacity .12s, background .12s}
 .year-add:hover{background:rgba(255,255,255,0.4);opacity:1}
 
-/* Ghost row at end of grid: "+ Lägg till initiativ" */
+/* Ghost row at end of grid: "+ Add initiative" */
 .ghost-row{cursor:pointer;color:var(--text-3);font-weight:500;justify-content:flex-start;font-style:italic}
 .ghost-row:hover{background:var(--bg-soft);color:var(--info-text)}
 .ghost-cell{cursor:pointer}

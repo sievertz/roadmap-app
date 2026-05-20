@@ -18,7 +18,7 @@ pub struct RecentFiles {
 pub fn new_window(app: AppHandle) -> Result<(), String> {
     let label = format!("window-{}", uuid_like());
     WebviewWindowBuilder::new(&app, &label, WebviewUrl::App("index.html".into()))
-        .title("Roadmap - utan namn")
+        .title("Roadmap - Untitled")
         .inner_size(1280.0, 800.0)
         .min_inner_size(800.0, 500.0)
         .build()
@@ -98,7 +98,7 @@ pub async fn export_svg_dialog(app: AppHandle, default_name: Option<String>) -> 
     let file_path = app
         .dialog()
         .file()
-        .add_filter("SVG-bild", &["svg"])
+        .add_filter("SVG Image", &["svg"])
         .set_file_name(&name)
         .blocking_save_file();
     Ok(file_path.and_then(|fp| match fp {

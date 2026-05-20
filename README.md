@@ -1,190 +1,242 @@
 # Roadmap
 
-Native macOS-app för interaktiva produkt-roadmaps. Byggd med Tauri 2 (Rust + webview), porterar funktionaliteten från den webbaserade artefakten.
+A native macOS app for interactive product roadmaps. Built with Tauri 2 (Rust + WebView).
 
-## Status
+## Features
 
-v0.1.0 - session 1 av 3. Projektet kompilerar och startar ett tomt fönster med fungerande menyrad. Frontend porteras i session 2.
+- Multi-window: each .roadmap file opens in its own window
+- File association: double-clicking a .roadmap file in Finder opens the app
+- Auto-save with debounce to disk
+- Interactive Gantt grid: drag bars to move, drag edges to resize, drag the row number to reorder
+- Inline rename for initiatives (double-click the name)
+- Edit modal: category, dev weeks, JIRA link with open-in-browser, dependencies, description
+- Month-level timeline with year/quarter/month bands, add or remove years dynamically
+- Editable legend with colour picker
+- Welcome view with recent files, auto-opens the most recent file on startup
+- SVG export for presentations (vector, scales infinitely)
+- Native macOS menu with Recent submenu
+- Light and dark mode (follows system setting)
 
-## Förkrav
+## Prerequisites
 
-På din Mac behöver du:
+On your Mac:
 
-1. Rust toolchain
-```
+```bash
+# Rust toolchain
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
 
-2. Node.js (16+)
-```
+# Node.js (16+)
 brew install node
-```
 
-3. Xcode Command Line Tools (för macOS-bundling)
-```
+# Xcode Command Line Tools
 xcode-select --install
 ```
 
-## Setup första gången
+## First-time setup
 
-```
+```bash
 cd roadmap-app
 npm install
 ```
 
-Detta installerar Tauri CLI och frontend-beroenden. Tar några minuter första gången.
+Installs the Tauri CLI and frontend dependencies. Takes a few minutes the first time.
 
-## Dev-läge
+## Dev mode
 
-```
+```bash
 npm run tauri dev
 ```
 
-Startar appen i dev-läge med hot-reload på frontend-ändringar. Första körningen kompilerar Rust-koden vilket tar 2-5 minuter. Sedan startar appen på sekunder.
+Starts the app with hot reload for frontend changes. The first run compiles the Rust code in 2-5 minutes, after that the app starts in seconds.
 
-Du borde se ett fönster med Roadmap-logon och placeholder-text. Filmenyn är aktiv:
-- Cmd+N öppnar nytt fönster
-- Cmd+O öppnar fildialog
-- Cmd+S, Cmd+Shift+S, Cmd+Shift+E loggar till console (riktig implementation i session 2)
+## Release build
 
-## Bygga release-version
-
-```
+```bash
 npm run tauri build
 ```
 
-Producerar en signerbar .app i `src-tauri/target/release/bundle/macos/Roadmap.app` och en DMG-fil i `src-tauri/target/release/bundle/dmg/`. Tar 3-10 minuter.
+Output:
 
-För osignerad .app: bara dra till Applications. Användaren behöver höger-klicka → Open första gången för att kringgå Gatekeeper.
+- `src-tauri/target/release/bundle/macos/Roadmap.app`
+- `src-tauri/target/release/bundle/dmg/Roadmap_0.1.0_aarch64.dmg`
 
-## Distribution och signering
+Takes 3-10 minutes depending on incremental cache.
 
-För att slippa Gatekeeper-varningar behöver appen signeras med ett Apple Developer-cert ($99/år).
+Universal binary (Intel + Apple Silicon):
 
-### Engångssetup
-1. Skaffa Apple Developer-konto: https://developer.apple.com/programs/
-2. Generera Developer ID Application-cert i Apple Developer-portalen
-3. Installera cert i Keychain
-4. Hitta team identifier (i Apple Developer-portalen)
+```bash
+rustup target add x86_64-apple-darwin
+npm run tauri build -- --target universal-apple-darwin
+```
 
-### Konfigurera signering i tauri.conf.json
+## Menu shortcuts
+
+| Shortcut | Action |
+|---|---|
+| Cmd+N | New window |
+| Cmd+O | Open file |
+| Cmd+W | Close window |
+| Cmd+S | Save |
+| Cmd+Shift+S | Save As |
+| Cmd+Shift+E | Export as HTML |
+| Cmd+Shift+P | Export as SVG |
+
+## Distribution and signing
+
+An unsigned .dmg works for internal sharing. The recipient right-clicks the .app and chooses Open the first time to bypass Gatekeeper.
+
+For public distribution you need an Apple Developer account (around USD 99 per year) plus a Developer ID certificate.
+
+### One-time setup
+
+1. Sign up for an Apple Developer account at `https://developer.apple.com/programs/`
+2. Generate a Developer ID Application certificate in the portal
+3. Install the certificate in Keychain
+4. Note your Team ID
+
+### Configure signing in tauri.conf.json
+
 ```json
 "macOS": {
-  "signingIdentity": "Developer ID Application: Ditt Namn (TEAMID)",
+  "signingIdentity": "Developer ID Application: Your Name (TEAMID)",
   "providerShortName": null,
   "entitlements": null
 }
 ```
 
-### Notarization (krävs för distribution utanför App Store)
-Sätt environment variables och kör build:
-```
-export APPLE_ID="din@email.com"
-export APPLE_PASSWORD="app-specifikt-lösenord"
+### Notarisation
+
+```bash
+export APPLE_ID="you@example.com"
+export APPLE_PASSWORD="app-specific-password"
 export APPLE_TEAM_ID="TEAMID"
 npm run tauri build
 ```
 
-Tauri notariserar automatiskt under build om dessa vars är satta.
+Tauri notarises automatically when these env vars are set.
 
 ## Auto-updater
 
-Auto-updatern är konfigurerad men kräver setup innan första release.
+The plumbing is in place but requires setup before the first release.
 
-### Generera signature key (engång)
-```
+### Generate signature key (once)
+
+```bash
 npm run tauri signer generate -- -w ~/.tauri/roadmap.key
 ```
 
-Detta skapar ett key pair. Public key sparas, private key används vid release-build.
+### Configure tauri.conf.json
 
-### Konfigurera tauri.conf.json
-Sätt public key i `plugins.updater.pubkey`:
+Set the public key in `plugins.updater.pubkey`:
+
 ```json
 "updater": {
   "pubkey": "PUBLIC_KEY_FROM_ABOVE",
-  "endpoints": ["https://github.com/DITT-USERNAME/roadmap-app/releases/latest/download/latest.json"]
+  "endpoints": ["https://github.com/sievertz/roadmap-app/releases/latest/download/latest.json"]
 }
 ```
 
-### Build med signering
-```
+### Build with signing
+
+```bash
 export TAURI_SIGNING_PRIVATE_KEY=~/.tauri/roadmap.key
-export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="lösenord-om-du-satte-ett"
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="password-if-you-set-one"
 npm run tauri build
 ```
 
-### Publicera release
-1. Skapa en GitHub release med tag `v0.1.0` (eller motsvarande)
-2. Ladda upp DMG-filen
-3. Ladda upp en `latest.json` med struktur:
+### Publish a release
+
+1. Create a GitHub release with tag `v0.1.0`
+2. Upload the DMG file
+3. Upload a `latest.json` with this format:
+
 ```json
 {
   "version": "0.1.0",
-  "notes": "Beskrivning av ändringar",
+  "notes": "Description of changes",
   "pub_date": "2026-05-20T12:00:00Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "INNEHÅLL_AV_DMG.sig",
-      "url": "https://github.com/.../Roadmap_0.1.0_aarch64.dmg"
-    },
-    "darwin-x86_64": {
-      "signature": "INNEHÅLL_AV_DMG.sig",
-      "url": "https://github.com/.../Roadmap_0.1.0_x86_64.dmg"
+      "signature": "CONTENTS_OF_DMG.sig",
+      "url": "https://github.com/sievertz/roadmap-app/releases/download/v0.1.0/Roadmap_0.1.0_aarch64.dmg"
     }
   }
 }
 ```
 
-När användarens app startar kollar den endpoint-URLen, jämför versioner, och visar update-dialog om ny version finns.
+When a user's app starts it checks the endpoint URL, compares versions and shows an update dialog if a new version is available.
 
-## Projektstruktur
+## Project structure
 
 ```
 roadmap-app/
-├── index.html              Frontend entry point
+├── index.html              Frontend entry
 ├── src/
-│   ├── main.js             Tauri API calls + menu event handlers
-│   └── styles.css          Frontend styling
+│   ├── main.js             Frontend logic, drag-and-drop, SVG export, Tauri API
+│   └── styles.css          UI styling, light/dark mode variables
 ├── src-tauri/
 │   ├── src/
 │   │   ├── main.rs         Entry point (calls lib::run)
-│   │   ├── lib.rs          Tauri builder, plugin setup
-│   │   ├── commands.rs     File IO, dialogs, recent files
-│   │   └── menu.rs         Native macOS menyrad
-│   ├── icons/              App-ikoner (PNG, ICNS, ICO)
-│   ├── capabilities/       Permissions per fönster
-│   ├── Cargo.toml          Rust-beroenden
+│   │   ├── lib.rs          Tauri builder, plugin setup, command registration
+│   │   ├── commands.rs     File IO, dialogs, recent files, open_external
+│   │   └── menu.rs         Native macOS menu and event dispatch
+│   ├── icons/              App icons (PNG, ICNS, ICO)
+│   ├── capabilities/       Per-window permissions
+│   ├── Cargo.toml          Rust dependencies
 │   ├── build.rs            Build script
-│   └── tauri.conf.json     App-config (namn, bundle id, ikoner, updater)
+│   └── tauri.conf.json     App config (name, bundle id, icons, updater)
 ├── package.json
 ├── vite.config.js
 └── README.md
 ```
 
-## Vanliga problem
+## File format
 
-### "Failed to compile" första körningen
-Sannolikt saknad Xcode Command Line Tools. Kör `xcode-select --install`.
+.roadmap files are JSON with this structure:
 
-### Appen startar inte i dev-läge
-Verifiera att port 1420 är ledig: `lsof -i:1420`. Om upptagen, ändra i vite.config.js och tauri.conf.json.
+```json
+{
+  "v": 5,
+  "config": {
+    "startYear": 2026,
+    "startMonth": 1,
+    "endYear": 2027,
+    "endMonth": 12,
+    "labelColumnWidth": 200
+  },
+  "initiatives": [
+    {
+      "id": "...",
+      "label": "Initiative name",
+      "position": { "s": 0, "e": 5 },
+      "type": "committed",
+      "weeks": 4,
+      "jira": "https://...",
+      "dependencies": "team Andromeda",
+      "description": "...",
+      "adjustable": true,
+      "dashed": false
+    }
+  ],
+  "legend": [
+    { "id": "committed", "label": "Committed", "color": "#378ADD" }
+  ],
+  "savedAt": "2026-05-20T12:00:00.000Z"
+}
+```
 
-### Build misslyckas med ikon-error
-Om `icon.icns` är skadad, kör `npm run tauri icon ./src-tauri/icons/icon.png` för att regenerera hela ikon-setet.
+The schema version (`v` field) is used for migration when reading older files.
 
-## Vad som kommer i session 2
+## Common problems
 
-- Portering av nuvarande HTML/JS/CSS från artefakten in i frontend
-- Koppla File-menyn till verkliga spara/öppna-flöden
-- Auto-save till .roadmap-fil
-- Multi-window för flera samtidigt öppna roadmaps
-- Window-titel speglar filnamn
-- Recent files-listan visas i menyn
+### "Failed to compile" on first run
+Most likely missing Xcode Command Line Tools. Run `xcode-select --install`.
 
-## Vad som kommer i session 3
+### App does not start in dev mode
+Port 1420 is occupied. Run `lsof -i:1420` and stop the process, or change the port in vite.config.js and tauri.conf.json.
 
-- Export as HTML implementation
-- Auto-updater publishing setup
-- Polish: about-dialog, keyboard shortcuts, file format dokumentation
-- Smoke-test av distribuerbar build
+### Build fails with icon error
+Regenerate the icon set: `npm run tauri icon ./src-tauri/icons/icon.png`
+
+### Permission denied when pushing to GitHub over SSH
+The SSH key is missing locally or has not been uploaded to `https://github.com/settings/keys`.
