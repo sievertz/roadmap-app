@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Roadmap</title>
+  <link rel="stylesheet" href="/src/styles.css" />
+</head>
+<body>
+<h2 class="sr-only">Interaktiv Gantt-vy för roadmap.</h2>
+
+<div class="gantt-root">
+  <div class="gantt-header">
+    <div class="gantt-title-row">
+      <svg class="gantt-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="5" width="9" height="3" rx="1" fill="#378ADD"/>
+        <rect x="6" y="10.5" width="12" height="3" rx="1" fill="#1D9E75"/>
+        <rect x="10" y="16" width="10" height="3" rx="1" fill="#BA7517"/>
+      </svg>
+      <h1 class="gantt-title" id="gantt-title">Untitled</h1>
+    </div>
+  </div>
+
+  <div class="gantt-actions">
+    <button class="btn" id="add-year">+ Lägg till år</button>
+  </div>
+
+
+  <div class="welcome" id="welcome">
+    <div class="welcome-card">
+      <svg class="welcome-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="5" width="9" height="3" rx="1" fill="#378ADD"/>
+        <rect x="6" y="10.5" width="12" height="3" rx="1" fill="#1D9E75"/>
+        <rect x="10" y="16" width="10" height="3" rx="1" fill="#BA7517"/>
+      </svg>
+      <h2>Välkommen till Roadmap</h2>
+      <p>Skapa en ny roadmap eller öppna en befintlig fil för att börja.</p>
+      <div class="welcome-actions">
+        <button class="btn btn-primary" id="welcome-new">+ Skapa ny roadmap</button>
+        <button class="btn" id="welcome-open">Öppna fil…</button>
+      </div>
+      <div class="welcome-recent" id="welcome-recent" style="display:none">
+        <h3>Senaste</h3>
+        <ul id="welcome-recent-list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="gantt-grid-wrap">
+    <div class="gantt-grid" id="grid"></div>
+  </div>
+
+  <div class="add-row">
+    <button class="btn btn-add" id="add-init">+ Lägg till initiativ</button>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <div class="edit-modal-backdrop" id="edit-modal-backdrop">
+    <div class="edit-modal-content" id="edit-panel">
+      <button class="modal-close" id="edit-close" aria-label="Stäng">×</button>
+      <div class="edit-title-row">
+        <div>
+          <div class="edit-title" id="edit-title"></div>
+          <div class="edit-subtitle">Position justeras genom drag direkt i chartet</div>
+        </div>
+      </div>
+
+      <div class="edit-grid">
+        <div class="field">
+          <label>Namn</label>
+          <input type="text" id="name-input" />
+        </div>
+        <div class="field">
+          <label>Kategori (färg)</label>
+          <select id="type-select"></select>
+        </div>
+        <div class="field">
+          <label>Estimat (dev-veckor)</label>
+          <input type="number" id="weeks-input" min="0" step="1" placeholder="t.ex. 4" />
+        </div>
+        <div class="field">
+          <label>JIRA-länk</label>
+          <div class="input-with-action">
+            <input type="url" id="jira-input" placeholder="https://..." />
+            <button type="button" id="jira-open" class="input-action-btn" title="Öppna länk i browser" disabled>↗</button>
+          </div>
+        </div>
+        <div class="field field-wide">
+          <label>Beroenden</label>
+          <input type="text" id="deps-input" placeholder="t.ex. team Andromeda, extern leverantör" />
+        </div>
+        <div class="field field-wide">
+          <label>Beskrivning</label>
+          <textarea id="desc-input" placeholder="Kort beskrivning av initiativet och omfattning"></textarea>
+        </div>
+      </div>
+
+      <div class="preview-box">
+        <div class="preview-title">Aktuell position</div>
+        <div id="preview-rows"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-danger" id="delete-btn">Ta bort initiativ</button>
+        <div class="btn-row-right">
+          <button class="btn" id="cancel-btn">Avbryt</button>
+          <button class="btn btn-primary" id="apply-btn">Tillämpa</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend-modal-backdrop" id="legend-modal-backdrop">
+    <div class="legend-modal-content">
+      <button class="modal-close" id="legend-close" aria-label="Stäng">×</button>
+      <div class="edit-title-row">
+        <div>
+          <div class="edit-title">Lägg till etikett</div>
+        </div>
+      </div>
+      <div class="edit-grid">
+        <div class="field field-wide">
+          <label>Namn</label>
+          <input type="text" id="legend-name-input" placeholder="t.ex. Strategiskt" />
+        </div>
+        <div class="field field-wide">
+          <label>Färg</label>
+          <input type="color" id="legend-color-input" value="#7F77DD" />
+        </div>
+      </div>
+      <div class="btn-row">
+        <div></div>
+        <div class="btn-row-right">
+          <button class="btn" id="legend-cancel">Avbryt</button>
+          <button class="btn btn-primary" id="legend-save">Lägg till</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modal">
+    <div class="modal">
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-actions">
+        <button class="btn" id="modal-cancel">Avbryt</button>
+        <button class="btn btn-danger-solid" id="modal-confirm">Bekräfta</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="about-modal">
+    <div class="modal" style="text-align:center">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:48px;height:48px;margin-bottom:8px">
+        <rect x="2" y="5" width="9" height="3" rx="1" fill="#378ADD"/>
+        <rect x="6" y="10.5" width="12" height="3" rx="1" fill="#1D9E75"/>
+        <rect x="10" y="16" width="10" height="3" rx="1" fill="#BA7517"/>
+      </svg>
+      <div class="modal-title">Roadmap</div>
+      <div class="modal-body" style="text-align:center">
+        Version 0.1.0<br>
+        Interaktiv gantt-vy för produkt-roadmaps.
+      </div>
+      <div class="modal-actions" style="justify-content:center">
+        <button class="btn btn-primary" id="about-close">Stäng</button>
+      </div>
+    </div>
+  </div>
+</div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

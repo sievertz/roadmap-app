@@ -1,0 +1,70 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Roadmap",
+  "version": "0.1.0",
+  "identifier": "com.dennis.roadmap",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Roadmap",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 500,
+        "resizable": true,
+        "fullscreen": false,
+        "label": "main"
+      }
+    ],
+    "security": {
+      "csp": null
+    },
+    "macOSPrivateApi": true
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Productivity",
+    "shortDescription": "Interaktiv roadmap-vy",
+    "longDescription": "Skapa och redigera produkt-roadmaps med drag-and-drop, flera scenarier och flexibla etiketter.",
+    "fileAssociations": [
+      {
+        "ext": ["roadmap"],
+        "name": "Roadmap Document",
+        "description": "Roadmap-fil",
+        "role": "Editor",
+        "mimeType": "application/x-roadmap"
+      }
+    ],
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "10.15",
+      "signingIdentity": null,
+      "providerShortName": null,
+      "entitlements": null
+    }
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://github.com/REPLACE-WITH-YOUR-USERNAME/roadmap-app/releases/latest/download/latest.json"
+      ],
+      "dialog": true,
+      "pubkey": "REPLACE_AFTER_GENERATING_KEY"
+    }
+  }
+}

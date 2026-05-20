@@ -1,0 +1,39 @@
+# Dependencies and build output
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Rust / Tauri build artifacts
+src-tauri/target/
+src-tauri/gen/
+src-tauri/WixTools/
+src-tauri/.cargo/
+
+# Bundle outputs that occasionally end up in the project root
+*.dmg
+*.app
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# macOS
+.DS_Store
+
+# Editor configs
+.vscode/
+.idea/
+*.swp
+
+# Updater signing keys - NEVER commit these
+*.pem
+*.key
+tauri-private.pem*
