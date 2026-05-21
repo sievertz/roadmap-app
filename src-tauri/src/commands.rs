@@ -36,9 +36,20 @@ pub fn unregister_window(state: State<FileWindowMap>, label: String) {
 }
 
 #[tauri::command]
-pub fn find_window_for_file(state: State<FileWindowMap>, path: String) -> Option<String> {
-    let map = state.0.lock().unwrap();
-    map.get(&path).cloned()
+pub fn find_window_for_file(app: AppHandle, state: State<FileWindowMap>, path: String) -> Option<String> {
+    let label = {
+        let map = state.0.lock().unwrap();
+        map.get(&path).cloned()
+    };
+    // Verify the window still exists; if not, clean up the stale entry and
+    // pretend the file isn't open anywhere.
+    if let Some(ref l) = label {
+        if app.get_webview_window(l).is_none() {
+            state.0.lock().unwrap().retain(|_, v| v != l);
+            return None;
+        }
+    }
+    label
 }
 
 // Tauri command: opens a new empty window
@@ -70,10 +81,10 @@ pub fn open_file_in_new_window(app: AppHandle, path: String) -> Result<(), Strin
 }
 
 // Tauri command wrapper: if a window already has this file open, focus it
-// instead of creating a duplicate window.
+// instead of creating a duplicate window. If the map has a stale entry
+// (window has been closed since registration), clean it up and open fresh.
 #[tauri::command]
 pub fn open_file_in_window(app: AppHandle, state: State<FileWindowMap>, path: String) -> Result<(), String> {
-    // Check if any existing window already has this file open
     let existing_label = {
         let map = state.0.lock().unwrap();
         map.get(&path).cloned()
@@ -84,6 +95,8 @@ pub fn open_file_in_window(app: AppHandle, state: State<FileWindowMap>, path: St
             let _ = win.set_focus();
             return Ok(());
         }
+        // Stale entry - window was closed but map wasn't cleaned. Remove it.
+        state.0.lock().unwrap().retain(|_, l| l != &label);
     }
     open_file_in_new_window(app, path)
 }

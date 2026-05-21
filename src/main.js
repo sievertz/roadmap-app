@@ -1923,7 +1923,8 @@ async function checkForUpdates(opts){
       return;
     }
     const wantUpdate = await ask(
-      `Roadmap ${update.version} is available.\n\n${update.body || 'Install and restart now?'}`,
+      `Roadmap ${update.version} is available. Install and restart now?\n\n` +
+      `See what's new at:\nhttps://github.com/sievertz/roadmap-app/releases/tag/v${update.version}`,
       { title: 'Update available', kind: 'info', okLabel: 'Install', cancelLabel: 'Later' }
     );
     if(wantUpdate){
@@ -1977,16 +1978,18 @@ async function init(){
     if(verEl) verEl.textContent = 'Version ' + v;
   } catch(e){}
 
-  // Unregister this window from the file-window map when it closes.
-  // Use fire-and-forget so the async invoke doesn't block window close.
+  // NOTE: We previously registered onCloseRequested to unregister the window
+  // from the file-window map, but Tauri 2 has a quirk where having any
+  // listener on close-requested blocks the default close behavior. Instead
+  // we clean up stale entries lazily in Rust when open_file_in_window finds
+  // a label that no longer corresponds to a real window.
+
+  // Schedule the auto update-check NOW (before any early returns below).
+  // Only from the main window so multiple open windows don't all check.
   try {
-    const win = getCurrentWindow();
-    await win.onCloseRequested(() => {
-      invoke('unregister_window', { label: win.label }).catch(() => {});
-    });
-  } catch(e){
-    console.warn('[Roadmap] could not register close listener:', e);
-  }
+    const w = getCurrentWindow();
+    if(w.label === 'main') setTimeout(checkForUpdates, 2000);
+  } catch(e){}
 
   // If launched with ?file=... in URL, load that file
   const params = new URLSearchParams(window.location.search);
@@ -2013,15 +2016,6 @@ async function init(){
 
   await updateWindowTitle();
   render();
-
-  // Check for updates once per app launch, only from the main window so we
-  // don't spam multiple checks if several windows are open.
-  try {
-    const win = getCurrentWindow();
-    if(win.label === 'main'){
-      setTimeout(checkForUpdates, 2000);
-    }
-  } catch(e){}
 }
 
 init().catch(e => {
