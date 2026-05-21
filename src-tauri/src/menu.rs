@@ -33,7 +33,11 @@ fn load_recent_files<R: Runtime>(app: &AppHandle<R>) -> Vec<String> {
 
 pub fn create_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let app_menu = SubmenuBuilder::new(app, "Roadmap")
-        .item(&PredefinedMenuItem::about(app, None, None)?)
+        .item(
+            &MenuItemBuilder::new("About Roadmap")
+                .id("app:about")
+                .build(app)?,
+        )
         .separator()
         .item(&PredefinedMenuItem::services(app, None)?)
         .separator()
@@ -179,12 +183,6 @@ pub fn create_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
                 .id("help:check_updates")
                 .build(app)?,
         )
-        .separator()
-        .item(
-            &MenuItemBuilder::new("About Roadmap")
-                .id("help:about")
-                .build(app)?,
-        )
         .build()?;
 
     let menu = MenuBuilder::new(app)
@@ -223,7 +221,7 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
             let _ = clear_recent_files_internal(app);
             let _ = create_menu(app);
         }
-        "help:about" => emit_to_focused(app, "menu:about", ()),
+        "app:about" => emit_to_focused(app, "menu:about", ()),
         "help:check_updates" => emit_to_focused(app, "menu:check_updates", ()),
         "help:shortcuts" => emit_to_focused(app, "menu:shortcuts", ()),
         "edit:undo" => emit_to_focused(app, "menu:undo", ()),
