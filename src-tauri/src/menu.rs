@@ -92,12 +92,7 @@ pub fn create_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         )
         .item(&recent_submenu)
         .separator()
-        .item(
-            &MenuItemBuilder::new("Close Window")
-                .id("file:close")
-                .accelerator("CmdOrCtrl+W")
-                .build(app)?,
-        )
+        .item(&PredefinedMenuItem::close_window(app, Some("Close Window"))?)
         .item(
             &MenuItemBuilder::new("Save")
                 .id("file:save")
@@ -218,7 +213,6 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
         "file:open" => emit_to_focused(app, "menu:open", ()),
         "file:save" => emit_to_focused(app, "menu:save", ()),
         "file:save_as" => emit_to_focused(app, "menu:save_as", ()),
-        "file:close" => emit_to_focused(app, "menu:close", ()),
         "file:export_html" => emit_to_focused(app, "menu:export_html", ()),
         "file:export_svg" => emit_to_focused(app, "menu:export_svg", ()),
         "file:print" => emit_to_focused(app, "menu:print", ()),

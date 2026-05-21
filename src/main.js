@@ -1637,13 +1637,6 @@ function generateExportSvg(){
   return parts.join('');
 }
 
-async function menuClose(){
-  try {
-    const win = getCurrentWindow();
-    await win.close();
-  } catch(e){}
-}
-
 // Generate a self-contained HTML export with current state baked in.
 // Re-uses the index.html structure but inlines the styles and state.
 async function generateExportHtml(){
@@ -1832,7 +1825,6 @@ async function wireMenuEvents(){
   await listen('menu:open', menuOpen);
   await listen('menu:save', menuSave);
   await listen('menu:save_as', menuSaveAs);
-  await listen('menu:close', menuClose);
   await listen('menu:export_html', menuExportHtml);
   await listen('menu:export_svg', menuExportSvg);
   await listen('menu:check_updates', () => checkForUpdates({ verbose: true }));
