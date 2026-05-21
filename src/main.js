@@ -5,6 +5,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getVersion } from "@tauri-apps/api/app";
 import { check } from "@tauri-apps/plugin-updater";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { relaunch } from "@tauri-apps/plugin-process";
@@ -1733,6 +1734,7 @@ async function wireMenuEvents(){
   await listen('menu:close', menuClose);
   await listen('menu:export_html', menuExportHtml);
   await listen('menu:export_svg', menuExportSvg);
+  await listen('menu:check_updates', () => checkForUpdates({ verbose: true }));
   await listen('menu:theme', (event) => {
     const theme = event.payload; // 'auto' | 'light' | 'dark'
     applyTheme(theme);
@@ -1802,10 +1804,14 @@ function startRoadmapTitleRename(){
 
 // ----- Auto-updater -----
 
-async function checkForUpdates(){
+async function checkForUpdates(opts){
+  const verbose = opts && opts.verbose;
   try {
     const update = await check();
-    if(!update) return; // already on latest
+    if(!update){
+      if(verbose) await ask('You are running the latest version.', { title: 'No updates', kind: 'info', okLabel: 'OK' });
+      return;
+    }
     const wantUpdate = await ask(
       `Roadmap ${update.version} is available.\n\n${update.body || 'Install and restart now?'}`,
       { title: 'Update available', kind: 'info', okLabel: 'Install', cancelLabel: 'Later' }
@@ -1815,8 +1821,10 @@ async function checkForUpdates(){
       await relaunch();
     }
   } catch(e){
-    // Silent failure - don't bother user if endpoint is unreachable, etc.
     console.error('[Roadmap] Update check failed:', e);
+    if(verbose){
+      await ask('Could not check for updates: ' + (e && e.message ? e.message : e), { title: 'Update check failed', kind: 'warning', okLabel: 'OK' });
+    }
   }
 }
 
@@ -1851,6 +1859,13 @@ async function init(){
   loadTheme();
   wireEvents();
   await wireMenuEvents();
+
+  // Populate version in About modal from tauri.conf.json
+  try {
+    const v = await getVersion();
+    const verEl = document.getElementById('about-version');
+    if(verEl) verEl.textContent = 'Version ' + v;
+  } catch(e){}
 
   // Unregister this window from the file-window map when it closes.
   // Use fire-and-forget so the async invoke doesn't block window close.

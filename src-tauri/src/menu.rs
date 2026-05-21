@@ -163,6 +163,12 @@ pub fn create_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 
     let help_menu = SubmenuBuilder::new(app, "Help")
         .item(
+            &MenuItemBuilder::new("Check for Updates…")
+                .id("help:check_updates")
+                .build(app)?,
+        )
+        .separator()
+        .item(
             &MenuItemBuilder::new("About Roadmap")
                 .id("help:about")
                 .build(app)?,
@@ -207,6 +213,7 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
             let _ = create_menu(app);
         }
         "help:about" => emit_to_focused(app, "menu:about", ()),
+        "help:check_updates" => emit_to_focused(app, "menu:check_updates", ()),
         other if other.starts_with("file:recent:") => {
             if let Some(idx_str) = other.strip_prefix("file:recent:") {
                 if let Ok(idx) = idx_str.parse::<usize>() {
