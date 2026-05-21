@@ -150,6 +150,30 @@
     </div>
   </div>
 
+  <div class="legend-modal-backdrop" id="year-notes-modal-backdrop">
+    <div class="legend-modal-content">
+      <button class="modal-close" id="year-notes-close" aria-label="Close">×</button>
+      <div class="edit-title-row">
+        <div>
+          <div class="edit-title" id="year-notes-title">Notes</div>
+        </div>
+      </div>
+      <div class="edit-grid">
+        <div class="field field-wide">
+          <label>Notes for this year</label>
+          <textarea id="year-notes-input" placeholder="e.g. Q1 OKR planning, hiring freeze ends in March, conference deadlines" style="min-height:120px"></textarea>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-danger" id="year-notes-clear">Clear</button>
+        <div class="btn-row-right">
+          <button class="btn" id="year-notes-cancel">Cancel</button>
+          <button class="btn btn-primary" id="year-notes-save">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="about-modal">
     <div class="modal" style="text-align:center">
       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:48px;height:48px;margin-bottom:8px">
@@ -160,7 +184,10 @@
       <div class="modal-title">Roadmap</div>
       <div class="modal-body" style="text-align:center">
         Version 0.1.0<br>
-        Interactive Gantt view for product roadmaps.
+        Interactive Gantt view for product roadmaps.<br>
+        <br>
+        Built by sievertz<br>
+        <a href="#" id="about-github" class="about-link">View on GitHub</a>
       </div>
       <div class="modal-actions" style="justify-content:center">
         <button class="btn btn-primary" id="about-close">Close</button>

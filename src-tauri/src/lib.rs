@@ -1,6 +1,9 @@
 mod commands;
 mod menu;
 
+use std::collections::HashMap;
+use std::sync::Mutex;
+
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -38,8 +41,12 @@ pub fn run() {
             commands::clear_recent_files,
             commands::set_window_title,
             commands::open_external,
+            commands::register_window_file,
+            commands::unregister_window,
+            commands::find_window_for_file,
             menu::refresh_menu,
         ])
+        .manage(commands::FileWindowMap(Mutex::new(HashMap::new())))
         .setup(|app| {
             menu::create_menu(app.handle())?;
             Ok(())

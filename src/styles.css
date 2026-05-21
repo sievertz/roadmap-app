@@ -1,14 +1,16 @@
 :root { color-scheme: light dark }
-html, body { background: #faf9f5; margin: 0; }
+html, body { background: #f8f4e7; margin: 0; }
 @media (prefers-color-scheme: dark){
-  html, body { background: #1a1a1a; }
+  html:not([data-theme]), html:not([data-theme]) body { background: #1a1a1a; }
 }
+html[data-theme="light"], html[data-theme="light"] body { background: #f8f4e7; }
+html[data-theme="dark"], html[data-theme="dark"] body { background: #1a1a1a; }
 *, *::before, *::after { box-sizing: border-box }
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .gantt-root{
-  --bg-card:#ffffff;
-  --bg-soft:#f5f4ef;
-  --bg-softer:#faf9f5;
+  --bg-card:#fdfaf1;
+  --bg-soft:#f2eee0;
+  --bg-softer:#f8f4e7;
   --text-1:#1a1a1a;
   --text-2:#5f5e5a;
   --text-3:#a09e96;
@@ -32,7 +34,7 @@ html, body { background: #faf9f5; margin: 0; }
   position:relative;
 }
 @media (prefers-color-scheme: dark){
-  .gantt-root{
+  .gantt-root:not([data-theme]){
     --bg-card:#242422;
     --bg-soft:#2e2d2a;
     --bg-softer:#2a2926;
@@ -50,10 +52,30 @@ html, body { background: #faf9f5; margin: 0; }
     --danger-border:#A32D2D;
   }
 }
+.gantt-root[data-theme="dark"]{
+  --bg-card:#242422;
+  --bg-soft:#2e2d2a;
+  --bg-softer:#2a2926;
+  --text-1:#f1efe8;
+  --text-2:#b4b2a9;
+  --text-3:#7a7975;
+  --border-1:#444441;
+  --border-2:#363533;
+  --border-3:#2e2d2a;
+  --info-bg:#0C447C;
+  --info-text:#B5D4F4;
+  --info-border:#185FA5;
+  --danger-bg:#501313;
+  --danger-text:#F09595;
+  --danger-border:#A32D2D;
+}
 .gantt-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap}
 .gantt-title-row{display:flex;align-items:center;gap:10px}
 .gantt-logo{width:26px;height:26px;flex-shrink:0;border-radius:4px}
-.gantt-title{font-size:18px;font-weight:600;color:var(--text-1);margin:0}
+.gantt-title{font-size:18px;font-weight:600;color:var(--text-1);margin:0;cursor:pointer;padding:2px 4px;border-radius:4px;transition:background .12s}
+.gantt-title:hover{background:var(--bg-soft)}
+.title-rename-input{font-size:18px;font-weight:600;color:var(--text-1);background:var(--bg-card);border:1px solid var(--info-border);border-radius:4px;padding:1px 4px;font-family:inherit;outline:none;min-width:200px}
+.title-rename-input:focus{box-shadow:0 0 0 2px rgba(24,95,165,0.2)}
 .gantt-actions{display:flex;justify-content:flex-end;align-items:center;margin-bottom:10px;gap:12px;flex-wrap:wrap}
 .gantt-grid-wrap{overflow-x:auto;border-radius:var(--radius-md);position:relative;border:1px solid var(--border-1);background:var(--bg-card)}
 .gantt-grid{display:grid;background:var(--bg-card)}
@@ -63,7 +85,7 @@ html, body { background: #faf9f5; margin: 0; }
 .year-remove{background:rgba(255,255,255,0.18);border:none;color:#ffffff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;padding:0;line-height:1;font-family:inherit;opacity:0.7;transition:opacity .12s, background .12s}
 .year-remove:hover{background:rgba(255,255,255,0.4);opacity:1}
 .lbl-cell{padding:0;background:var(--bg-softer);border-bottom:1px solid var(--border-3);border-right:1px solid var(--border-1);position:sticky;left:0;z-index:6;overflow:hidden}
-.row-label{padding:9px 12px;font-size:12px;line-height:1.35;display:flex;align-items:center;justify-content:space-between;gap:8px;transition:background .12s, opacity .12s;height:38px;position:relative}
+.row-label{padding:9px 12px;font-size:12px;line-height:1.35;display:flex;align-items:center;justify-content:space-between;gap:8px;transition:background .12s, opacity .12s;height:var(--row-h,38px);position:relative}
 .row-label.adj{cursor:grab}
 .row-label.adj:active{cursor:grabbing}
 .row-label.adj:hover{background:var(--bg-soft)}
@@ -79,7 +101,7 @@ html, body { background: #faf9f5; margin: 0; }
 .lbl-text{flex:1;color:var(--text-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .lbl-tag{font-size:10px;color:var(--text-3);padding:1px 6px;background:var(--bg-soft);border-radius:3px;font-weight:500;flex-shrink:0}
 .row-label.selected .lbl-tag{background:#ffffff80;color:var(--info-text)}
-.qcell{border-left:1px solid var(--border-3);border-bottom:1px solid var(--border-3);position:relative;height:38px;background:var(--bg-card)}
+.qcell{border-left:1px solid var(--border-3);border-bottom:1px solid var(--border-3);position:relative;height:var(--row-h,38px);background:var(--bg-card)}
 .qcell.row-drop-above{box-shadow:inset 0 2px 0 0 var(--info-text)}
 .qcell.row-drop-below{box-shadow:inset 0 -2px 0 0 var(--info-text)}
 .qcell.row-dragging{opacity:0.35}
@@ -97,8 +119,9 @@ html, body { background: #faf9f5; margin: 0; }
 .label-resize-handle{position:absolute;top:0;bottom:0;width:6px;cursor:col-resize;z-index:12;background:transparent;transition:background .12s}
 .label-resize-handle:hover, .label-resize-handle.active{background:rgba(0,0,0,0.12)}
 @media (prefers-color-scheme: dark){
-  .label-resize-handle:hover, .label-resize-handle.active{background:rgba(255,255,255,0.18)}
+  .gantt-root:not([data-theme]) .label-resize-handle:hover, .gantt-root:not([data-theme]) .label-resize-handle.active{background:rgba(255,255,255,0.18)}
 }
+.gantt-root[data-theme="dark"] .label-resize-handle:hover, .gantt-root[data-theme="dark"] .label-resize-handle.active{background:rgba(255,255,255,0.18)}
 .add-row{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:12px;flex-wrap:wrap}
 .btn{padding:8px 14px;border:1px solid var(--border-1);border-radius:var(--radius-md);background:var(--bg-card);cursor:pointer;font-size:12px;color:var(--text-1);font-family:inherit;font-weight:500;transition:all .12s}
 .btn:hover{background:var(--bg-soft);border-color:var(--text-2)}
@@ -111,7 +134,11 @@ html, body { background: #faf9f5; margin: 0; }
 .btn-danger-solid:hover{background:#791F1F;border-color:#791F1F}
 .btn-add{background:#185FA5;color:#ffffff;border-color:#185FA5;display:inline-flex;align-items:center;gap:6px}
 .btn-add:hover{background:#0C447C;border-color:#0C447C}
-.legend{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px;font-size:11px;color:var(--text-2);padding:10px 14px;background:var(--bg-soft);border:1px solid var(--border-3);border-radius:var(--radius-md)}
+.legend{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--text-2);padding:10px 14px;background:color-mix(in srgb, var(--bg-card) 88%, transparent);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border:1px solid var(--border-2);border-radius:var(--radius-md);position:sticky;bottom:14px;margin-top:14px;z-index:20;box-shadow:0 4px 16px rgba(0,0,0,0.08)}
+@media (prefers-color-scheme: dark){
+  .gantt-root:not([data-theme]) .legend{box-shadow:0 4px 16px rgba(0,0,0,0.4)}
+}
+.gantt-root[data-theme="dark"] .legend{box-shadow:0 4px 16px rgba(0,0,0,0.4)}
 .legend-item{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:4px;cursor:pointer;transition:background .12s;border:1px solid transparent;position:relative}
 .legend-item:hover{background:var(--bg-card);border-color:var(--border-2)}
 .legend-item.editing{background:var(--bg-card);border-color:var(--info-border)}
@@ -194,8 +221,9 @@ body:has(.welcome.active) .gantt-actions{display:none}
 /* Quarter band - middle header row between year and month */
 .gh.quarter-band{font-size:10px;font-weight:500;background:#DCEBE6;color:#133933;padding:3px 6px;border-bottom:1px solid var(--border-2);letter-spacing:.02em}
 @media (prefers-color-scheme: dark){
-  .gh.quarter-band{background:#4A8F7E;color:#F1EFE8}
+  .gantt-root:not([data-theme]) .gh.quarter-band{background:#4A8F7E;color:#F1EFE8}
 }
+.gantt-root[data-theme="dark"] .gh.quarter-band{background:#4A8F7E;color:#F1EFE8}
 
 /* Drag handle on the number column */
 .row-number.drag-handle{cursor:grab;transition:color .12s, background .12s;border-radius:3px;padding:1px 4px;margin-right:-2px}
@@ -205,9 +233,9 @@ body:has(.welcome.active) .gantt-actions{display:none}
 /* Ensure span is properly draggable on WebKit */
 .row-number.drag-handle{display:inline-block}
 
-/* Override row label cursor - no text I-beam, just default pointer */
+/* Override row label cursor - no text I-beam */
 .row-label{cursor:default}
-.lbl-text{cursor:default;user-select:none}
+.lbl-text{cursor:pointer;user-select:none}
 
 /* Header rows separate visually by color contrast, no horizontal dividers needed */
 .gh.year-band, .gh.quarter-band{border-bottom:none}
@@ -227,3 +255,67 @@ body:has(.welcome.active) .gantt-actions{display:none}
 .input-action-btn{padding:0 12px;border:1px solid var(--border-1);border-radius:var(--radius-md);background:var(--bg-card);cursor:pointer;font-size:14px;color:var(--text-2);font-family:inherit;flex-shrink:0;transition:all .12s;line-height:1}
 .input-action-btn:hover:not(:disabled){background:var(--bg-soft);color:var(--text-1);border-color:var(--text-2)}
 .input-action-btn:disabled{opacity:0.35;cursor:not-allowed}
+
+/* About modal link */
+.about-link{color:var(--info-text);text-decoration:none;font-size:12px;font-weight:500}
+.about-link:hover{text-decoration:underline}
+
+/* Dependency indicator dot on Gantt bars */
+.dep-dot{position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:#D85A30;border:2px solid var(--bg-card);z-index:2;pointer-events:auto;cursor:help}
+
+/* Row delete button on label rows: × visible on hover */
+.row-remove{background:transparent;border:none;color:var(--text-3);cursor:pointer;font-size:16px;padding:0;line-height:1;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;border-radius:3px;font-family:inherit;opacity:0;transition:opacity .12s, color .12s, background .12s;flex-shrink:0}
+.row-label:hover .row-remove{opacity:0.55}
+.row-remove:hover{opacity:1 !important;color:var(--danger-text);background:var(--danger-bg)}
+
+/* Search input in sticky-col header (replaces 'Initiative' label) */
+.gh.sticky-col.search-cell{padding:0;text-align:center}
+.search-input{width:100%;height:100%;border:none;background:transparent;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-2);font-family:inherit;letter-spacing:.02em;text-transform:uppercase;outline:none;text-align:center}
+.search-input::placeholder{color:var(--text-2);opacity:1;text-transform:uppercase}
+.search-input:focus{background:var(--bg-card);text-transform:none;font-weight:500;letter-spacing:0;color:var(--text-1);text-align:left}
+.search-input:focus::placeholder{text-transform:none;font-weight:400;color:var(--text-3);opacity:0.7}
+
+/* Year notes button: small icon on year band, opens notes modal */
+.year-note-btn{background:rgba(255,255,255,0.18);border:none;color:#ffffff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;padding:0;line-height:1;font-family:inherit;opacity:0;transition:opacity .12s, background .12s}
+.gh.year-band:hover .year-note-btn{opacity:0.7}
+.year-note-btn:hover{background:rgba(255,255,255,0.4);opacity:1 !important}
+.year-note-btn.has-note{opacity:0.9;font-size:9px}
+
+/* Responsive row height: scale up on taller screens to fill available vertical space */
+@media (min-height: 1000px){
+  .gantt-root{--row-h:46px}
+}
+@media (min-height: 1300px){
+  .gantt-root{--row-h:54px}
+}
+@media (min-height: 1700px){
+  .gantt-root{--row-h:64px}
+}
+
+/* Print styling: hide UI chrome, show full timeline (no horizontal scroll), preserve colors */
+@media print{
+  @page{size:landscape;margin:1cm}
+  html, body{background:#ffffff !important}
+  .gantt-root{padding:0;--row-h:32px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .gantt-grid-wrap{overflow:visible !important;border:1px solid #c9c5b8 !important}
+  .gantt-grid{min-width:0 !important;width:auto !important}
+  /* Hide all interactive UI */
+  .edit-modal-backdrop, .legend-modal-backdrop, .modal-backdrop,
+  .welcome, .gantt-actions, .add-row,
+  .year-remove, .year-add, .year-note-btn,
+  .dep-dot,
+  .legend-add-btn, .legend-edit-hint, .legend-item-remove,
+  .resize-handle, .label-resize-handle{display:none !important}
+  /* Search input becomes static "Initiative" text */
+  .search-input{background:transparent !important;color:#5f5e5a !important;text-transform:uppercase !important;font-weight:600 !important}
+  .search-input::placeholder{color:#5f5e5a !important;opacity:1 !important}
+  /* Ensure all background colors render */
+  .bar, .gh.year-band, .gh.quarter-band, .gh{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  /* Bar text always white on solid bars */
+  .bar:not(.dashed){color:#ffffff !important}
+  /* Disable hover-only states so print is consistent */
+  .row-label:hover, .legend-item:hover, .gh.year-band:hover{background:inherit}
+  /* Legend prints inline at bottom, not as floating overlay */
+  .legend{position:static !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;background:#f2eee0 !important;box-shadow:none !important;margin-top:14px}
+  .gantt-root{padding-bottom:0 !important}
+}

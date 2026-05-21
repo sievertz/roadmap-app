@@ -1,8 +1,10 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 
 const RECENT_FILES_FILENAME: &str = "recent.json";
@@ -11,6 +13,32 @@ const MAX_RECENT_FILES: usize = 10;
 #[derive(Serialize, Deserialize, Default, Clone)]
 pub struct RecentFiles {
     pub files: Vec<String>,
+}
+
+// In-memory map of file path → window label, used to avoid opening duplicate
+// windows for the same file. Updated by the frontend whenever a window
+// loads or saves a file.
+pub struct FileWindowMap(pub Mutex<HashMap<String, String>>);
+
+#[tauri::command]
+pub fn register_window_file(state: State<FileWindowMap>, label: String, path: String) {
+    let mut map = state.0.lock().unwrap();
+    // A given window can only "own" one file path at a time, so remove any
+    // previous entries that point at this label before inserting the new one.
+    map.retain(|_, l| l != &label);
+    map.insert(path, label);
+}
+
+#[tauri::command]
+pub fn unregister_window(state: State<FileWindowMap>, label: String) {
+    let mut map = state.0.lock().unwrap();
+    map.retain(|_, l| l != &label);
+}
+
+#[tauri::command]
+pub fn find_window_for_file(state: State<FileWindowMap>, path: String) -> Option<String> {
+    let map = state.0.lock().unwrap();
+    map.get(&path).cloned()
 }
 
 // Tauri command: opens a new empty window
@@ -26,7 +54,9 @@ pub fn new_window(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-// Helper to open a .roadmap file in a new window (from CLI args or open-with)
+// Helper to open a .roadmap file in a new window (from CLI args or open-with).
+// Does NOT check for existing windows - that's the responsibility of the
+// frontend command wrapper below.
 pub fn open_file_in_new_window(app: AppHandle, path: String) -> Result<(), String> {
     let label = format!("window-{}", uuid_like());
     let url = format!("index.html?file={}", urlencoding(&path));
@@ -39,9 +69,22 @@ pub fn open_file_in_new_window(app: AppHandle, path: String) -> Result<(), Strin
     Ok(())
 }
 
-// Tauri command version of the above - callable from frontend
+// Tauri command wrapper: if a window already has this file open, focus it
+// instead of creating a duplicate window.
 #[tauri::command]
-pub fn open_file_in_window(app: AppHandle, path: String) -> Result<(), String> {
+pub fn open_file_in_window(app: AppHandle, state: State<FileWindowMap>, path: String) -> Result<(), String> {
+    // Check if any existing window already has this file open
+    let existing_label = {
+        let map = state.0.lock().unwrap();
+        map.get(&path).cloned()
+    };
+    if let Some(label) = existing_label {
+        if let Some(win) = app.get_webview_window(&label) {
+            let _ = win.unminimize();
+            let _ = win.set_focus();
+            return Ok(());
+        }
+    }
     open_file_in_new_window(app, path)
 }
 
@@ -156,7 +199,16 @@ pub fn get_recent_files(app: AppHandle) -> Result<Vec<String>, String> {
     }
     let contents = fs::read_to_string(&path).map_err(|e| e.to_string())?;
     let recent: RecentFiles = serde_json::from_str(&contents).unwrap_or_default();
-    Ok(recent.files)
+    // Filter out paths that no longer exist on disk so deleted files don't
+    // clutter the Recents list. Rewrite the file if anything was filtered.
+    let existing: Vec<String> = recent.files.iter().filter(|p| Path::new(p).exists()).cloned().collect();
+    if existing.len() != recent.files.len() {
+        let cleaned = RecentFiles { files: existing.clone() };
+        if let Ok(json) = serde_json::to_string_pretty(&cleaned) {
+            let _ = fs::write(&path, json);
+        }
+    }
+    Ok(existing)
 }
 
 #[tauri::command]

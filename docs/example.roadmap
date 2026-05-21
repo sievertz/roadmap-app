@@ -1,0 +1,123 @@
+{
+  "v": 6,
+  "config": {
+    "startYear": 2026,
+    "startMonth": 1,
+    "endYear": 2027,
+    "endMonth": 6,
+    "labelColumnWidth": 220,
+    "title": "Product Roadmap 2026",
+    "yearNotes": {
+      "2026": "Focus year on platform consolidation. Hiring freeze ends Q2. Two major board reviews: April and October.",
+      "2027": "Shift toward AI-led product experiments and international expansion. Budget approved end of 2026."
+    }
+  },
+  "initiatives": [
+    {
+      "id": "mobile_v2",
+      "label": "Mobile app v2",
+      "position": { "s": 0, "e": 2 },
+      "type": "ongoing",
+      "weeks": 12,
+      "adjustable": true,
+      "dashed": false,
+      "description": "Native rewrite of the customer mobile app on a shared design system.",
+      "jira": "",
+      "dependencies": ""
+    },
+    {
+      "id": "billing_migration",
+      "label": "Billing migration",
+      "position": { "s": 2, "e": 7 },
+      "type": "committed",
+      "weeks": 20,
+      "adjustable": true,
+      "dashed": false,
+      "description": "Migrate from legacy invoicing to Stripe-based billing with usage metering.",
+      "jira": "https://jira.example.com/browse/BILL-1",
+      "dependencies": "team Payments infrastructure"
+    },
+    {
+      "id": "api_redesign",
+      "label": "API redesign",
+      "position": { "s": 3, "e": 8 },
+      "type": "dependency",
+      "weeks": null,
+      "adjustable": true,
+      "dashed": true,
+      "description": "External dependency: REST → GraphQL migration owned by Platform team.",
+      "jira": "",
+      "dependencies": "Platform team Q2 roadmap"
+    },
+    {
+      "id": "customer_dashboard",
+      "label": "Customer dashboard",
+      "position": { "s": 4, "e": 6 },
+      "type": "priority",
+      "weeks": 10,
+      "adjustable": true,
+      "dashed": false,
+      "description": "Self-service analytics dashboard for B2B customers.",
+      "jira": "",
+      "dependencies": ""
+    },
+    {
+      "id": "payment_provider_switch",
+      "label": "Payment provider switch",
+      "position": { "s": 6, "e": 12 },
+      "type": "growth",
+      "weeks": 24,
+      "adjustable": true,
+      "dashed": false,
+      "description": "Migration from current PSP to Adyen for better European coverage and lower fees.",
+      "jira": "https://jira.example.com/browse/PAY-42",
+      "dependencies": "external vendor approval, finance team sign-off"
+    },
+    {
+      "id": "search_infra",
+      "label": "Search infrastructure rebuild",
+      "position": { "s": 8, "e": 11 },
+      "type": "priority",
+      "weeks": 14,
+      "adjustable": true,
+      "dashed": false,
+      "description": "Move from Elasticsearch to Typesense for faster faceted search.",
+      "jira": "",
+      "dependencies": ""
+    },
+    {
+      "id": "ai_beta",
+      "label": "AI assistant beta",
+      "position": { "s": 9, "e": 11 },
+      "type": "maybe",
+      "weeks": null,
+      "adjustable": true,
+      "dashed": false,
+      "description": "Internal beta of LLM-powered support assistant.",
+      "jira": "",
+      "dependencies": ""
+    },
+    {
+      "id": "legacy_sunset",
+      "label": "Legacy backend sunset",
+      "position": { "s": 13, "e": 17 },
+      "type": "new",
+      "weeks": 16,
+      "adjustable": true,
+      "dashed": false,
+      "description": "Decommission the v1 monolith after all services have migrated.",
+      "jira": "",
+      "dependencies": ""
+    }
+  ],
+  "legend": [
+    { "id": "ongoing", "label": "Ongoing", "color": "#888780" },
+    { "id": "committed", "label": "Committed", "color": "#378ADD" },
+    { "id": "priority", "label": "Prioritised", "color": "#1D9E75" },
+    { "id": "maybe", "label": "Maybe", "color": "#BA7517" },
+    { "id": "growth", "label": "Growth", "color": "#7F77DD" },
+    { "id": "dependency", "label": "Dependency", "color": "#A32D2D", "dashed": true },
+    { "id": "new", "label": "New", "color": "#D85A30" }
+  ],
+  "savedAt": "2026-05-20T22:00:00.000Z"
+}

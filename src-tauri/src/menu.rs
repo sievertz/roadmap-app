@@ -22,11 +22,13 @@ fn load_recent_files<R: Runtime>(app: &AppHandle<R>) -> Vec<String> {
     if !path.exists() {
         return vec![];
     }
-    fs::read_to_string(&path)
+    let files: Vec<String> = fs::read_to_string(&path)
         .ok()
         .and_then(|s| serde_json::from_str::<RecentFiles>(&s).ok())
         .map(|r| r.files)
-        .unwrap_or_default()
+        .unwrap_or_default();
+    // Hide files that have been deleted from disk
+    files.into_iter().filter(|p| std::path::Path::new(p).exists()).collect()
 }
 
 pub fn create_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
@@ -121,6 +123,13 @@ pub fn create_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
                 .accelerator("CmdOrCtrl+Shift+P")
                 .build(app)?,
         )
+        .separator()
+        .item(
+            &MenuItemBuilder::new("Print…")
+                .id("file:print")
+                .accelerator("CmdOrCtrl+P")
+                .build(app)?,
+        )
         .build()?;
 
     let edit_menu = SubmenuBuilder::new(app, "Edit")
@@ -133,7 +142,15 @@ pub fn create_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .item(&PredefinedMenuItem::select_all(app, None)?)
         .build()?;
 
+    let appearance_menu = SubmenuBuilder::new(app, "Appearance")
+        .item(&MenuItemBuilder::new("Use System Setting").id("view:theme_auto").build(app)?)
+        .item(&MenuItemBuilder::new("Light").id("view:theme_light").build(app)?)
+        .item(&MenuItemBuilder::new("Dark").id("view:theme_dark").build(app)?)
+        .build()?;
+
     let view_menu = SubmenuBuilder::new(app, "View")
+        .item(&appearance_menu)
+        .separator()
         .item(&PredefinedMenuItem::fullscreen(app, None)?)
         .build()?;
 
@@ -181,6 +198,10 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
         "file:close" => emit_to_focused(app, "menu:close", ()),
         "file:export_html" => emit_to_focused(app, "menu:export_html", ()),
         "file:export_svg" => emit_to_focused(app, "menu:export_svg", ()),
+        "file:print" => emit_to_focused(app, "menu:print", ()),
+        "view:theme_auto" => app.emit("menu:theme", "auto").unwrap_or(()),
+        "view:theme_light" => app.emit("menu:theme", "light").unwrap_or(()),
+        "view:theme_dark" => app.emit("menu:theme", "dark").unwrap_or(()),
         "file:clear_recent" => {
             let _ = clear_recent_files_internal(app);
             let _ = create_menu(app);

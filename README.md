@@ -2,6 +2,16 @@
 
 A native macOS app for interactive product roadmaps. Built with Tauri 2 (Rust + WebView).
 
+![Roadmap screenshot](docs/screenshot.png)
+
+## Download
+
+Grab the latest release from the [Releases page](https://github.com/sievertz/roadmap-app/releases/latest). Drag Roadmap.app to Applications.
+
+The app is currently unsigned. The first time you open it, macOS Gatekeeper will warn that the developer is not verified. Right-click the app in Applications, choose Open, and confirm. After that it launches normally.
+
+Built for Apple Silicon (M1/M2/M3/M4). Open an issue if you need an Intel build.
+
 ## Features
 
 - Multi-window: each .roadmap file opens in its own window

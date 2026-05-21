@@ -8,7 +8,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 
 // ----- Constants -----
 
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 const AUTOSAVE_DEBOUNCE_MS = 400;
 
 const DEFAULT_CONFIG = {
@@ -16,7 +16,8 @@ const DEFAULT_CONFIG = {
   startMonth: 1,
   endYear: 2027,
   endMonth: 12,
-  labelColumnWidth: 200
+  labelColumnWidth: 200,
+  yearNotes: {}
 };
 
 const MONTH_LABELS = ['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
@@ -49,7 +50,8 @@ const state = {
   pendingConfirm: null,
   reorderDragId: null,
   reorderDropTarget: null,
-  reorderDropPosition: null
+  reorderDropPosition: null,
+  searchQuery: ''
 };
 
 let currentFilePath = null;
@@ -168,6 +170,20 @@ function removeYear(yearGroup){
 function findInit(id){ return state.initiatives.find(x => x.id === id); }
 function legendFor(typeId){ return state.legend.find(x => x.id === typeId); }
 
+// Return a name that doesn't collide with any other initiative. If the desired
+// name is taken, append (2), (3) etc. Case-insensitive comparison.
+function uniqueInitName(desired, excludeId){
+  const trimmed = (desired || '').trim();
+  if(!trimmed) return trimmed;
+  const taken = name => state.initiatives.some(i =>
+    i.id !== excludeId && (i.label || '').trim().toLowerCase() === name.toLowerCase()
+  );
+  if(!taken(trimmed)) return trimmed;
+  let n = 2;
+  while(taken(trimmed + ' (' + n + ')')) n++;
+  return trimmed + ' (' + n + ')';
+}
+
 function setPosition(init, start, end){
   init.position = {s:start, e:end};
 }
@@ -250,10 +266,20 @@ async function loadFromFile(path){
     await invoke("add_recent_file", { path });
     await invoke("refresh_menu");
     await updateWindowTitle();
+    await registerWindowFile(path);
     render();
   } catch(e){
     console.error("[Roadmap] load failed:", e);
     alert("Could not open file: " + e);
+  }
+}
+
+async function registerWindowFile(path){
+  try {
+    const win = getCurrentWindow();
+    await invoke("register_window_file", { label: win.label, path });
+  } catch(e){
+    console.error("[Roadmap] register_window_file failed:", e);
   }
 }
 
@@ -265,10 +291,14 @@ function basenameOf(path){
 }
 
 async function updateWindowTitle(){
-  const name = basenameOf(currentFilePath) || 'Untitled';
-  const title = name + ' — Roadmap';
+  // Display title falls back to the filename (without extension) when not set.
+  // This lets users have a nice human-readable name independent of the file.
+  const displayName = (state.config && state.config.title && state.config.title.trim())
+    || basenameOf(currentFilePath)
+    || 'Untitled';
+  const title = displayName + ' — Roadmap';
   const titleEl = document.getElementById('gantt-title');
-  if(titleEl) titleEl.textContent = name;
+  if(titleEl) titleEl.textContent = displayName;
   document.title = title;
   try {
     const win = getCurrentWindow();
@@ -361,6 +391,17 @@ function renderGrid(){
     const labelSpan = document.createElement('span');
     labelSpan.textContent = y.label;
     c.appendChild(labelSpan);
+    // Year notes: edit button (visible on hover) + indicator dot if notes exist
+    const hasNote = !!(state.config.yearNotes && state.config.yearNotes[y.label] && state.config.yearNotes[y.label].trim());
+    const noteBtn = document.createElement('button');
+    noteBtn.className = 'year-note-btn' + (hasNote ? ' has-note' : '');
+    noteBtn.textContent = hasNote ? '●' : '✎';
+    noteBtn.title = hasNote ? 'Edit notes for ' + y.label : 'Add notes for ' + y.label;
+    noteBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      openYearNotesModal(y.label);
+    });
+    c.appendChild(noteBtn);
     if(canRemoveYear(y)){
       const rm = document.createElement('button');
       rm.className = 'year-remove';
@@ -402,10 +443,22 @@ function renderGrid(){
   });
 
   const blank = document.createElement('div');
-  blank.className = 'gh sticky-col';
-  blank.textContent = 'Initiative';
-  blank.style.textAlign = 'left';
-  blank.style.paddingLeft = '12px';
+  blank.className = 'gh sticky-col search-cell';
+  const searchInput = document.createElement('input');
+  searchInput.type = 'text';
+  searchInput.className = 'search-input';
+  searchInput.placeholder = 'Initiative';
+  searchInput.value = state.searchQuery || '';
+  searchInput.addEventListener('input', e => {
+    state.searchQuery = e.target.value;
+    render();
+    // After re-render, refocus the new input and restore cursor position
+    setTimeout(() => {
+      const fresh = document.querySelector('.search-input');
+      if(fresh){ fresh.focus(); fresh.setSelectionRange(state.searchQuery.length, state.searchQuery.length); }
+    }, 0);
+  });
+  blank.appendChild(searchInput);
   grid.appendChild(blank);
 
   let yearIdx = 0;
@@ -424,7 +477,11 @@ function renderGrid(){
     yearMonthsUsed++;
   });
 
+  const q = (state.searchQuery || '').trim().toLowerCase();
   state.initiatives.forEach((init, idx) => {
+    // Filter: hide rows that don't match the search query
+    if(q && !(init.label || '').toLowerCase().includes(q)) return;
+
     const isDragging = state.reorderDragId === init.id;
     const isDropTarget = state.reorderDropTarget === init.id;
     const dropClass = isDropTarget ? 'drop-' + state.reorderDropPosition : '';
@@ -472,11 +529,46 @@ function renderGrid(){
       t.textContent = init.weeks + 'v';
       li.appendChild(t);
     }
+    // Row delete button (visible on hover)
     if(init.adjustable !== false && !isRenaming){
-      // Double-click on the row label triggers inline rename (Finder-style).
-      // Single-click does nothing - opening the detail modal is done via the time bar instead.
+      const rm = document.createElement('button');
+      rm.className = 'row-remove';
+      rm.textContent = '×';
+      rm.title = 'Delete initiative';
+      rm.addEventListener('click', e => {
+        e.stopPropagation();
+        e.preventDefault();
+        confirmAction('Delete initiative',
+          'Are you sure you want to delete "' + init.label + '"? This cannot be undone.',
+          () => {
+            state.initiatives = state.initiatives.filter(x => x.id !== init.id);
+            if(state.selected === init.id) state.selected = null;
+            render();
+          });
+      });
+      rm.addEventListener('mousedown', e => e.stopPropagation()); // don't start drag
+      li.appendChild(rm);
+    }
+    if(init.adjustable !== false && !isRenaming){
+      // Single-click on the name opens the edit modal; double-click triggers
+      // inline rename (Finder-style). The click handler uses a small timer so
+      // double-click can pre-empt it.
+      const txtEl = li.querySelector('.lbl-text');
+      if(txtEl){
+        txtEl.addEventListener('click', e => {
+          if(state.reorderDragId) return;
+          if(clickTimer){ clearTimeout(clickTimer); clickTimer = null; }
+          const id = init.id;
+          clickTimer = setTimeout(() => {
+            clickTimer = null;
+            state.selected = id;
+            render();
+          }, CLICK_DELAY_MS);
+        });
+      }
       li.addEventListener('dblclick', () => {
         if(state.reorderDragId) return;
+        if(clickTimer){ clearTimeout(clickTimer); clickTimer = null; }
         startInlineRename(init.id);
       });
       attachReorderHandlers(li, num, init);
@@ -511,6 +603,14 @@ function renderGrid(){
         textSpan.className = 'bar-text';
         textSpan.textContent = init.label;
         b.appendChild(textSpan);
+
+        // Dependency indicator: small dot top-right when init.dependencies is non-empty
+        if(init.dependencies && init.dependencies.trim()){
+          const depDot = document.createElement('span');
+          depDot.className = 'dep-dot';
+          depDot.title = 'Dependencies: ' + init.dependencies;
+          b.appendChild(depDot);
+        }
 
         if(init.adjustable !== false){
           const leftH = document.createElement('div');
@@ -939,7 +1039,7 @@ function commitInlineRename(value){
   const init = findInit(renamingId);
   if(init){
     const trimmed = (value || '').trim();
-    if(trimmed) init.label = trimmed;
+    if(trimmed) init.label = uniqueInitName(trimmed, init.id);
   }
   renamingId = null;
   render();
@@ -1008,7 +1108,7 @@ function applyChanges(){
   const init = findInit(state.selected);
   if(!init) return;
   const newLabel = document.getElementById('name-input').value.trim();
-  if(newLabel) init.label = newLabel;
+  if(newLabel) init.label = uniqueInitName(newLabel, init.id);
   init.type = document.getElementById('type-select').value;
   const w = document.getElementById('weeks-input').value;
   init.weeks = w === '' ? null : +w;
@@ -1033,12 +1133,50 @@ function deleteInit(){
     });
 }
 
+// ----- Year notes -----
+
+let yearNotesEditingYear = null;
+
+function openYearNotesModal(year){
+  yearNotesEditingYear = String(year);
+  document.getElementById('year-notes-title').textContent = 'Notes for ' + year;
+  const notes = (state.config.yearNotes && state.config.yearNotes[year]) || '';
+  document.getElementById('year-notes-input').value = notes;
+  document.getElementById('year-notes-modal-backdrop').classList.add('open');
+  setTimeout(() => document.getElementById('year-notes-input').focus(), 30);
+}
+
+function closeYearNotesModal(){
+  yearNotesEditingYear = null;
+  document.getElementById('year-notes-modal-backdrop').classList.remove('open');
+}
+
+function saveYearNotes(){
+  if(!yearNotesEditingYear) return;
+  if(!state.config.yearNotes) state.config.yearNotes = {};
+  const val = document.getElementById('year-notes-input').value;
+  if(val.trim()){
+    state.config.yearNotes[yearNotesEditingYear] = val;
+  } else {
+    delete state.config.yearNotes[yearNotesEditingYear];
+  }
+  closeYearNotesModal();
+  render();
+}
+
+function clearYearNotes(){
+  if(!yearNotesEditingYear) return;
+  if(state.config.yearNotes) delete state.config.yearNotes[yearNotesEditingYear];
+  closeYearNotesModal();
+  render();
+}
+
 function addInit(){
   const id = 'new_' + Date.now();
   const qs = months();
   const startPos = Math.min(qs.length - 1, Math.floor(qs.length / 2));
   const newInit = {
-    id, label:'New initiative',
+    id, label: uniqueInitName('New initiative', null),
     position: {s:startPos, e:startPos},
     type: state.legend[0] ? state.legend[0].id : 'new',
     adjustable: true, weeks: null,
@@ -1079,6 +1217,13 @@ async function menuOpen(){
   try {
     const path = await invoke("open_dialog");
     if(!path) return;
+    // If another window already has this file open, focus it instead of
+    // loading a duplicate (open_file_in_window handles the focus logic).
+    const existingLabel = await invoke("find_window_for_file", { path });
+    if(existingLabel){
+      await invoke("open_file_in_window", { path });
+      return;
+    }
     // If the current window is untitled and has no content, load into it.
     // Otherwise open a new window.
     if(!currentFilePath && state.initiatives.length === 0){
@@ -1101,7 +1246,11 @@ async function menuSave(){
 
 async function menuSaveAs(){
   try {
-    const defaultName = (basenameOf(currentFilePath) || 'Untitled') + '.roadmap';
+    // For brand new roadmaps, leave the filename blank so the user is forced
+    // to pick a real name instead of accepting "Untitled". For Save-As on an
+    // existing file, pre-fill with current name so they can tweak.
+    const baseName = basenameOf(currentFilePath);
+    const defaultName = baseName ? baseName + '.roadmap' : '';
     const path = await invoke("save_dialog", { defaultName });
     if(!path) return;
     currentFilePath = path;
@@ -1109,6 +1258,7 @@ async function menuSaveAs(){
     await invoke("add_recent_file", { path });
     await invoke("refresh_menu");
     await updateWindowTitle();
+    await registerWindowFile(path);
   } catch(e){
     console.error("[Roadmap] save failed:", e);
   }
@@ -1364,6 +1514,11 @@ function generateExportSvg(){
           parts.push(`<text x="${barX + 10}" y="${ry + ROW_H / 2}" font-size="11" font-weight="600" fill="#ffffff" dominant-baseline="central">${svgEscape(t)}</text>`);
         }
       }
+
+      // Dependency dot (small circle in top-right corner)
+      if(init.dependencies && init.dependencies.trim()){
+        parts.push(`<circle cx="${barX + barW - 1}" cy="${barY + 1}" r="4.5" fill="#D85A30" stroke="${C.bgCard}" stroke-width="2"/>`);
+      }
     }
 
     // Row bottom border (light)
@@ -1437,6 +1592,12 @@ async function generateExportHtml(){
 // ----- Event wiring -----
 
 function wireEvents(){
+  // Inline rename the roadmap title (H1). Saves to state.config.title.
+  const titleEl = document.getElementById('gantt-title');
+  if(titleEl){
+    titleEl.addEventListener('click', () => startRoadmapTitleRename());
+  }
+
   document.getElementById('modal-confirm').addEventListener('click', () => {
     if(state.pendingConfirm) state.pendingConfirm();
     state.pendingConfirm = null;
@@ -1493,6 +1654,10 @@ function wireEvents(){
       if(state.pendingConfirm){
         state.pendingConfirm = null;
         document.getElementById('modal').classList.remove('open');
+      } else if(document.getElementById('about-modal').classList.contains('open')){
+        document.getElementById('about-modal').classList.remove('open');
+      } else if(document.getElementById('year-notes-modal-backdrop').classList.contains('open')){
+        closeYearNotesModal();
       } else if(document.getElementById('legend-modal-backdrop').classList.contains('open')){
         closeLegendAdd();
       } else if(state.selected){
@@ -1501,9 +1666,18 @@ function wireEvents(){
       }
       return;
     }
-    if((e.metaKey || e.ctrlKey) && e.key === 'Enter' && state.selected){
-      e.preventDefault();
-      applyChanges();
+    if((e.metaKey || e.ctrlKey) && e.key === 'Enter'){
+      // Year notes modal: save and close
+      if(document.getElementById('year-notes-modal-backdrop').classList.contains('open')){
+        e.preventDefault();
+        saveYearNotes();
+        return;
+      }
+      // Edit modal: apply changes
+      if(state.selected){
+        e.preventDefault();
+        applyChanges();
+      }
     }
   });
 
@@ -1530,6 +1704,22 @@ function wireEvents(){
       document.getElementById('about-modal').classList.remove('open');
     }
   });
+
+  // GitHub link in About modal: open in system browser via Tauri open_external
+  document.getElementById('about-github').addEventListener('click', async e => {
+    e.preventDefault();
+    try { await invoke('open_external', { url: 'https://github.com/sievertz/roadmap-app' }); }
+    catch(err){ console.error('[Roadmap] open_external failed:', err); }
+  });
+
+  // Year notes modal wiring
+  document.getElementById('year-notes-close').addEventListener('click', closeYearNotesModal);
+  document.getElementById('year-notes-cancel').addEventListener('click', closeYearNotesModal);
+  document.getElementById('year-notes-save').addEventListener('click', saveYearNotes);
+  document.getElementById('year-notes-clear').addEventListener('click', clearYearNotes);
+  document.getElementById('year-notes-modal-backdrop').addEventListener('click', e => {
+    if(e.target === document.getElementById('year-notes-modal-backdrop')) closeYearNotesModal();
+  });
 }
 
 async function wireMenuEvents(){
@@ -1540,12 +1730,30 @@ async function wireMenuEvents(){
   await listen('menu:close', menuClose);
   await listen('menu:export_html', menuExportHtml);
   await listen('menu:export_svg', menuExportSvg);
+  await listen('menu:theme', (event) => {
+    const theme = event.payload; // 'auto' | 'light' | 'dark'
+    applyTheme(theme);
+  });
+  await listen('menu:print', () => {
+    // Close any open modals so they don't appear in print preview
+    if(state.selected){ state.selected = null; render(); }
+    document.querySelectorAll('.edit-modal-backdrop, .legend-modal-backdrop, .modal-backdrop')
+      .forEach(el => el.classList.remove('open'));
+    // Small delay so DOM updates before print dialog opens
+    setTimeout(() => window.print(), 50);
+  });
   await listen('menu:about', () => {
     document.getElementById('about-modal').classList.add('open');
   });
   await listen('menu:open_recent', async (event) => {
     const path = event.payload;
     if(typeof path === 'string'){
+      // Check if file is already open elsewhere first
+      const existingLabel = await invoke('find_window_for_file', { path });
+      if(existingLabel){
+        await invoke('open_file_in_window', { path });
+        return;
+      }
       if(!currentFilePath && state.initiatives.length === 0){
         await loadFromFile(path);
       } else {
@@ -1555,11 +1763,82 @@ async function wireMenuEvents(){
   });
 }
 
+// ----- Roadmap title inline rename -----
+
+function startRoadmapTitleRename(){
+  const h = document.getElementById('gantt-title');
+  if(!h || h.querySelector('input')) return; // already editing
+  const current = (state.config.title && state.config.title.trim()) || basenameOf(currentFilePath) || '';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'title-rename-input';
+  input.value = current;
+  input.placeholder = 'Roadmap title';
+  h.textContent = '';
+  h.appendChild(input);
+  input.focus();
+  input.select();
+  let done = false;
+  const commit = () => {
+    if(done) return; done = true;
+    const val = input.value.trim();
+    state.config.title = val || '';
+    scheduleAutosave();
+    updateWindowTitle();
+  };
+  const cancel = () => {
+    if(done) return; done = true;
+    updateWindowTitle(); // re-render with current value
+  };
+  input.addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); commit(); }
+    if(e.key === 'Escape'){ e.preventDefault(); cancel(); }
+  });
+  input.addEventListener('blur', commit);
+}
+
+// ----- Theme -----
+
+const THEME_KEY = 'roadmap.theme';
+
+function applyTheme(theme){
+  const root = document.querySelector('.gantt-root');
+  if(!root) return;
+  if(theme === 'light' || theme === 'dark'){
+    root.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+    try { localStorage.setItem(THEME_KEY, theme); } catch(e){}
+  } else {
+    root.removeAttribute('data-theme');
+    document.documentElement.removeAttribute('data-theme');
+    try { localStorage.removeItem(THEME_KEY); } catch(e){}
+  }
+}
+
+function loadTheme(){
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    if(saved === 'light' || saved === 'dark') applyTheme(saved);
+  } catch(e){}
+}
+
 // ----- Boot -----
 
 async function init(){
+  loadTheme();
   wireEvents();
   await wireMenuEvents();
+
+  // Unregister this window from the file-window map when it closes
+  try {
+    const win = getCurrentWindow();
+    await win.onCloseRequested(async () => {
+      try { await invoke('unregister_window', { label: win.label }); }
+      catch(e){ /* ignore - window is closing anyway */ }
+    });
+  } catch(e){
+    console.warn('[Roadmap] could not register close listener:', e);
+  }
 
   // If launched with ?file=... in URL, load that file
   const params = new URLSearchParams(window.location.search);
