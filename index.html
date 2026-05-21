@@ -10,17 +10,6 @@
 <h2 class="sr-only">Interactive Gantt view for the roadmap.</h2>
 
 <div class="gantt-root">
-  <div class="gantt-header">
-    <div class="gantt-title-row">
-      <svg class="gantt-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="2" y="5" width="9" height="3" rx="1" fill="#378ADD"/>
-        <rect x="6" y="10.5" width="12" height="3" rx="1" fill="#1D9E75"/>
-        <rect x="10" y="16" width="10" height="3" rx="1" fill="#BA7517"/>
-      </svg>
-      <h1 class="gantt-title" id="gantt-title">Untitled</h1>
-    </div>
-  </div>
-
   <div class="gantt-actions">
     <button class="btn" id="add-year">+ Add year</button>
   </div>
@@ -47,6 +36,16 @@
   </div>
 
   <div class="gantt-grid-wrap">
+    <div class="gantt-titlebar">
+      <button class="gantt-logo-btn" id="gantt-logo-btn" title="Click to change logo">
+        <svg class="gantt-logo" id="gantt-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="5" width="9" height="3" rx="1" fill="#378ADD"/>
+          <rect x="6" y="10.5" width="12" height="3" rx="1" fill="#1D9E75"/>
+          <rect x="10" y="16" width="10" height="3" rx="1" fill="#BA7517"/>
+        </svg>
+      </button>
+      <h1 class="gantt-title" id="gantt-title">Untitled</h1>
+    </div>
     <div class="gantt-grid" id="grid"></div>
   </div>
 
@@ -170,6 +169,32 @@
           <button class="btn" id="year-notes-cancel">Cancel</button>
           <button class="btn btn-primary" id="year-notes-save">Save</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="logo-modal">
+    <div class="modal" style="max-width:380px">
+      <div class="modal-title">Choose logo</div>
+      <div class="modal-body" style="text-align:left">
+        <div class="logo-current" id="logo-modal-preview"></div>
+
+        <div class="field" style="margin-top:14px">
+          <label>Emoji</label>
+          <input type="text" id="logo-emoji-input" placeholder="🚀" maxlength="8" style="font-size:18px;text-align:center;padding:8px 10px;border:1px solid var(--border-1);border-radius:var(--radius-md);background:var(--bg-card);color:var(--text-1);font-family:inherit" />
+          <small style="font-size:11px;color:var(--text-3);margin-top:4px">Type or paste an emoji. On macOS: Ctrl+Cmd+Space opens the system emoji picker.</small>
+        </div>
+
+        <div style="text-align:center;color:var(--text-3);font-size:11px;margin:14px 0;text-transform:uppercase;letter-spacing:.04em">or</div>
+
+        <button class="btn" id="logo-upload-btn" style="width:100%">Upload image…</button>
+        <small style="font-size:11px;color:var(--text-3);display:block;margin-top:4px;text-align:center">PNG, JPG, SVG, GIF, WebP. Max 500 KB.</small>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-danger" id="logo-reset-btn">Reset to default</button>
+        <div style="flex:1"></div>
+        <button class="btn" id="logo-cancel-btn">Cancel</button>
+        <button class="btn btn-primary" id="logo-save-btn">Save</button>
       </div>
     </div>
   </div>

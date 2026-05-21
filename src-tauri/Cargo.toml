@@ -1,6 +1,6 @@
 [package]
 name = "roadmap"
-version = "0.1.9"
+version = "0.1.10"
 description = "Roadmap - interactive Gantt view for product roadmaps"
 authors = ["Dennis"]
 edition = "2021"

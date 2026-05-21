@@ -5,18 +5,22 @@
     "startMonth": 1,
     "endYear": 2027,
     "endMonth": 6,
-    "labelColumnWidth": 220,
-    "title": "Product Roadmap 2026",
+    "labelColumnWidth": 280,
     "yearNotes": {
       "2026": "Focus year on platform consolidation. Hiring freeze ends Q2. Two major board reviews: April and October.",
       "2027": "Shift toward AI-led product experiments and international expansion. Budget approved end of 2026."
-    }
+    },
+    "title": "Product Roadmap 2026",
+    "logo": "🚀"
   },
   "initiatives": [
     {
       "id": "mobile_v2",
       "label": "Mobile app v2",
-      "position": { "s": 0, "e": 2 },
+      "position": {
+        "s": 0,
+        "e": 2
+      },
       "type": "ongoing",
       "weeks": 12,
       "adjustable": true,
@@ -28,7 +32,10 @@
     {
       "id": "billing_migration",
       "label": "Billing migration",
-      "position": { "s": 2, "e": 7 },
+      "position": {
+        "s": 2,
+        "e": 7
+      },
       "type": "committed",
       "weeks": 20,
       "adjustable": true,
@@ -40,7 +47,10 @@
     {
       "id": "api_redesign",
       "label": "API redesign",
-      "position": { "s": 3, "e": 8 },
+      "position": {
+        "s": 3,
+        "e": 8
+      },
       "type": "dependency",
       "weeks": null,
       "adjustable": true,
@@ -52,7 +62,10 @@
     {
       "id": "customer_dashboard",
       "label": "Customer dashboard",
-      "position": { "s": 4, "e": 6 },
+      "position": {
+        "s": 4,
+        "e": 6
+      },
       "type": "priority",
       "weeks": 10,
       "adjustable": true,
@@ -64,7 +77,10 @@
     {
       "id": "payment_provider_switch",
       "label": "Payment provider switch",
-      "position": { "s": 6, "e": 12 },
+      "position": {
+        "s": 6,
+        "e": 12
+      },
       "type": "growth",
       "weeks": 24,
       "adjustable": true,
@@ -76,7 +92,10 @@
     {
       "id": "search_infra",
       "label": "Search infrastructure rebuild",
-      "position": { "s": 8, "e": 11 },
+      "position": {
+        "s": 8,
+        "e": 11
+      },
       "type": "priority",
       "weeks": 14,
       "adjustable": true,
@@ -88,7 +107,10 @@
     {
       "id": "ai_beta",
       "label": "AI assistant beta",
-      "position": { "s": 9, "e": 11 },
+      "position": {
+        "s": 9,
+        "e": 11
+      },
       "type": "maybe",
       "weeks": null,
       "adjustable": true,
@@ -100,7 +122,10 @@
     {
       "id": "legacy_sunset",
       "label": "Legacy backend sunset",
-      "position": { "s": 13, "e": 17 },
+      "position": {
+        "s": 13,
+        "e": 17
+      },
       "type": "new",
       "weeks": 16,
       "adjustable": true,
@@ -111,13 +136,42 @@
     }
   ],
   "legend": [
-    { "id": "ongoing", "label": "Ongoing", "color": "#888780" },
-    { "id": "committed", "label": "Committed", "color": "#378ADD" },
-    { "id": "priority", "label": "Prioritised", "color": "#1D9E75" },
-    { "id": "maybe", "label": "Maybe", "color": "#BA7517" },
-    { "id": "growth", "label": "Growth", "color": "#7F77DD" },
-    { "id": "dependency", "label": "Dependency", "color": "#A32D2D", "dashed": true },
-    { "id": "new", "label": "New", "color": "#D85A30" }
+    {
+      "id": "ongoing",
+      "label": "Ongoing",
+      "color": "#888780"
+    },
+    {
+      "id": "committed",
+      "label": "Committed",
+      "color": "#378ADD"
+    },
+    {
+      "id": "priority",
+      "label": "Prioritised",
+      "color": "#1D9E75"
+    },
+    {
+      "id": "maybe",
+      "label": "Maybe",
+      "color": "#BA7517"
+    },
+    {
+      "id": "growth",
+      "label": "Growth",
+      "color": "#7F77DD"
+    },
+    {
+      "id": "dependency",
+      "label": "Dependency",
+      "color": "#A32D2D",
+      "dashed": true
+    },
+    {
+      "id": "new",
+      "label": "New",
+      "color": "#D85A30"
+    }
   ],
-  "savedAt": "2026-05-20T22:00:00.000Z"
+  "savedAt": "2026-05-21T19:23:04.463Z"
 }

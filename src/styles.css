@@ -69,11 +69,18 @@ html[data-theme="dark"], html[data-theme="dark"] body { background: #1a1a1a; }
   --danger-text:#F09595;
   --danger-border:#A32D2D;
 }
-.gantt-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap}
-.gantt-title-row{display:flex;align-items:center;gap:10px}
-.gantt-logo{width:26px;height:26px;flex-shrink:0;border-radius:4px}
+.gantt-header{display:none}
+.gantt-titlebar{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--bg-soft);border-bottom:1px solid var(--border-2)}
+.gantt-logo-btn{background:transparent;border:none;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;position:relative;border-radius:4px;transition:background .12s}
+.gantt-logo-btn:hover{background:var(--bg-card)}
+.gantt-logo{width:26px;height:26px;flex-shrink:0;border-radius:4px;display:block}
+img.gantt-logo{object-fit:contain;background:var(--bg-card)}
+.gantt-logo-emoji{font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0}
+.logo-current{display:flex;align-items:center;justify-content:center;width:60px;height:60px;margin:0 auto;border:1px solid var(--border-3);border-radius:var(--radius-md);background:var(--bg-card)}
+.logo-preview-image{width:40px;height:40px;object-fit:contain;border-radius:4px}
+.logo-preview-emoji{font-size:36px;line-height:1}
 .gantt-title{font-size:18px;font-weight:600;color:var(--text-1);margin:0;cursor:pointer;padding:2px 4px;border-radius:4px;transition:background .12s}
-.gantt-title:hover{background:var(--bg-soft)}
+.gantt-title:hover{background:var(--bg-card)}
 .title-rename-input{font-size:18px;font-weight:600;color:var(--text-1);background:var(--bg-card);border:1px solid var(--info-border);border-radius:4px;padding:1px 4px;font-family:inherit;outline:none;min-width:200px}
 .title-rename-input:focus{box-shadow:0 0 0 2px rgba(24,95,165,0.2)}
 .gantt-actions{display:flex;justify-content:flex-end;align-items:center;margin-bottom:10px;gap:12px;flex-wrap:wrap}

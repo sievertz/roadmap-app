@@ -330,6 +330,7 @@ async function loadFromFile(path){
     const data = JSON.parse(contents);
     suppressAutosave = true;
     applyLoadedData(data);
+    autoFitLabelColumn();
     invalidateCache();
     suppressAutosave = false;
     currentFilePath = path;
@@ -341,6 +342,28 @@ async function loadFromFile(path){
   } catch(e){
     console.error("[Roadmap] load failed:", e);
     alert("Could not open file: " + e);
+  }
+}
+
+// Auto-expand the label column width to fit the longest initiative name on
+// file load, so users never see trunkated names by default. Called only
+// once per file open - user can still drag to override afterwards.
+function autoFitLabelColumn(){
+  if(!state.initiatives || state.initiatives.length === 0) return;
+  const PAD_LEFT = 12 + 22 + 8;  // padding + row number + gap
+  const PAD_RIGHT = 12 + 18 + 8; // padding + delete button + buffer
+  let maxNeeded = 0;
+  state.initiatives.forEach(init => {
+    const nameW = svgMeasureText(init.label || '', 12, '400');
+    const tagW = init.weeks ? svgMeasureText(init.weeks + 'v', 10, '500') + 12 : 0;
+    const total = PAD_LEFT + nameW + (tagW ? tagW + 8 : 0) + PAD_RIGHT;
+    if(total > maxNeeded) maxNeeded = total;
+  });
+  const cap = 400;
+  const min = 150;
+  const optimal = Math.max(min, Math.min(cap, Math.ceil(maxNeeded)));
+  if((state.config.labelColumnWidth || 200) < optimal){
+    state.config.labelColumnWidth = optimal;
   }
 }
 
@@ -370,6 +393,7 @@ async function updateWindowTitle(){
   const titleEl = document.getElementById('gantt-title');
   if(titleEl) titleEl.textContent = displayName;
   document.title = title;
+  renderLogo();
   try {
     const win = getCurrentWindow();
     await win.setTitle(title);
@@ -1487,11 +1511,19 @@ function generateExportSvg(){
   {
     const tx = PAD, ty = PAD;
     const size = 26;
-    const sc = size / 24;
     const lx = tx, ly = ty + (TITLE_H - size) / 2;
-    parts.push(`<rect x="${lx + 2 * sc}" y="${ly + 5 * sc}" width="${9 * sc}" height="${3 * sc}" rx="${1 * sc}" fill="#378ADD"/>`);
-    parts.push(`<rect x="${lx + 6 * sc}" y="${ly + 10.5 * sc}" width="${12 * sc}" height="${3 * sc}" rx="${1 * sc}" fill="#1D9E75"/>`);
-    parts.push(`<rect x="${lx + 10 * sc}" y="${ly + 16 * sc}" width="${10 * sc}" height="${3 * sc}" rx="${1 * sc}" fill="#BA7517"/>`);
+    const logoVal = state.config.logo || '';
+    if(logoVal.startsWith('data:')){
+      parts.push(`<image x="${lx}" y="${ly}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet" href="${svgEscape(logoVal)}"/>`);
+    } else if(logoVal){
+      // Emoji: render as text. Slightly larger font + adjusted baseline for visual centering.
+      parts.push(`<text x="${lx + size / 2}" y="${ly + size / 2}" font-size="22" text-anchor="middle" dominant-baseline="central">${svgEscape(logoVal)}</text>`);
+    } else {
+      const sc = size / 24;
+      parts.push(`<rect x="${lx + 2 * sc}" y="${ly + 5 * sc}" width="${9 * sc}" height="${3 * sc}" rx="${1 * sc}" fill="#378ADD"/>`);
+      parts.push(`<rect x="${lx + 6 * sc}" y="${ly + 10.5 * sc}" width="${12 * sc}" height="${3 * sc}" rx="${1 * sc}" fill="#1D9E75"/>`);
+      parts.push(`<rect x="${lx + 10 * sc}" y="${ly + 16 * sc}" width="${10 * sc}" height="${3 * sc}" rx="${1 * sc}" fill="#BA7517"/>`);
+    }
     parts.push(`<text x="${tx + size + 10}" y="${ty + TITLE_H / 2}" font-size="18" font-weight="600" fill="${C.text1}" dominant-baseline="central">${svgEscape(titleStr)}</text>`);
   }
 
@@ -1684,6 +1716,26 @@ function wireEvents(){
     titleEl.addEventListener('click', () => startRoadmapTitleRename());
   }
 
+  // Logo click: open modal where user picks image OR emoji
+  const logoBtn = document.getElementById('gantt-logo-btn');
+  if(logoBtn){
+    logoBtn.addEventListener('click', () => openLogoModal());
+  }
+
+  // Logo modal buttons
+  document.getElementById('logo-upload-btn').addEventListener('click', () => pickLogoImage());
+  document.getElementById('logo-emoji-input').addEventListener('input', e => updateLogoPreview('emoji', e.target.value.trim()));
+  document.getElementById('logo-cancel-btn').addEventListener('click', closeLogoModal);
+  document.getElementById('logo-reset-btn').addEventListener('click', () => {
+    pendingLogo = '';
+    updateLogoPreview('none', null);
+    document.getElementById('logo-emoji-input').value = '';
+  });
+  document.getElementById('logo-save-btn').addEventListener('click', saveLogoModal);
+  document.getElementById('logo-modal').addEventListener('click', e => {
+    if(e.target === document.getElementById('logo-modal')) closeLogoModal();
+  });
+
   document.getElementById('modal-confirm').addEventListener('click', () => {
     if(state.pendingConfirm) state.pendingConfirm();
     state.pendingConfirm = null;
@@ -1742,6 +1794,8 @@ function wireEvents(){
         document.getElementById('modal').classList.remove('open');
       } else if(document.getElementById('about-modal').classList.contains('open')){
         document.getElementById('about-modal').classList.remove('open');
+      } else if(document.getElementById('logo-modal').classList.contains('open')){
+        closeLogoModal();
       } else if(document.getElementById('shortcuts-modal').classList.contains('open')){
         document.getElementById('shortcuts-modal').classList.remove('open');
       } else if(document.getElementById('year-notes-modal-backdrop').classList.contains('open')){
@@ -1864,6 +1918,129 @@ async function wireMenuEvents(){
       }
     }
   });
+}
+
+// ----- Custom logo -----
+
+const DEFAULT_LOGO_SVG = '<svg class="gantt-logo" id="gantt-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+  '<rect x="2" y="5" width="9" height="3" rx="1" fill="#378ADD"/>' +
+  '<rect x="6" y="10.5" width="12" height="3" rx="1" fill="#1D9E75"/>' +
+  '<rect x="10" y="16" width="10" height="3" rx="1" fill="#BA7517"/>' +
+  '</svg>';
+
+// state.config.logo can be either a data URL (image) or a short emoji string.
+// pendingLogo holds the modal's draft value during editing.
+let pendingLogo = '';
+
+function isImageLogo(v){ return typeof v === 'string' && v.startsWith('data:'); }
+function isEmojiLogo(v){ return typeof v === 'string' && v.length > 0 && !v.startsWith('data:'); }
+
+function openLogoModal(){
+  pendingLogo = state.config.logo || '';
+  const emojiInput = document.getElementById('logo-emoji-input');
+  emojiInput.value = isEmojiLogo(pendingLogo) ? pendingLogo : '';
+  if(isImageLogo(pendingLogo)) updateLogoPreview('image', pendingLogo);
+  else if(isEmojiLogo(pendingLogo)) updateLogoPreview('emoji', pendingLogo);
+  else updateLogoPreview('default', null);
+  document.getElementById('logo-modal').classList.add('open');
+  setTimeout(() => emojiInput.focus(), 30);
+}
+
+function closeLogoModal(){
+  document.getElementById('logo-modal').classList.remove('open');
+  pendingLogo = '';
+}
+
+function updateLogoPreview(kind, value){
+  const preview = document.getElementById('logo-modal-preview');
+  if(!preview) return;
+  preview.innerHTML = '';
+  if(kind === 'image' && value){
+    const img = document.createElement('img');
+    img.src = value;
+    img.className = 'logo-preview-image';
+    preview.appendChild(img);
+    pendingLogo = value;
+  } else if(kind === 'emoji' && value){
+    const span = document.createElement('span');
+    span.className = 'logo-preview-emoji';
+    span.textContent = value;
+    preview.appendChild(span);
+    pendingLogo = value;
+  } else {
+    const tmpl = document.createElement('div');
+    tmpl.innerHTML = DEFAULT_LOGO_SVG;
+    tmpl.firstChild.style.width = '40px';
+    tmpl.firstChild.style.height = '40px';
+    preview.appendChild(tmpl.firstChild);
+    pendingLogo = '';
+  }
+}
+
+function pickLogoImage(){
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/png,image/jpeg,image/svg+xml,image/gif,image/webp';
+  input.addEventListener('change', e => {
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    if(file.size > 500_000){
+      alert('Logo must be smaller than 500 KB. Got ' + Math.round(file.size/1024) + ' KB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      // Image picked - clear emoji input so they don't conflict
+      document.getElementById('logo-emoji-input').value = '';
+      updateLogoPreview('image', ev.target.result);
+    };
+    reader.readAsDataURL(file);
+  });
+  input.click();
+}
+
+function saveLogoModal(){
+  // Re-read emoji input directly at save time. Some input methods
+  // (including macOS Ctrl+Cmd+Space emoji picker) bypass the 'input' event,
+  // so pendingLogo may be stale.
+  const emojiInputVal = document.getElementById('logo-emoji-input').value.trim();
+  let finalLogo = pendingLogo;
+  if(!isImageLogo(pendingLogo)){
+    finalLogo = emojiInputVal; // empty string clears, non-empty sets emoji
+  }
+  const current = state.config.logo || '';
+  if(finalLogo !== current){
+    captureSnapshot();
+    if(finalLogo) state.config.logo = finalLogo;
+    else delete state.config.logo;
+    scheduleAutosave();
+    renderLogo();
+  }
+  closeLogoModal();
+}
+
+function renderLogo(){
+  const btn = document.getElementById('gantt-logo-btn');
+  if(!btn) return;
+  const existing = btn.querySelector('.gantt-logo, .gantt-logo-emoji');
+  if(existing) existing.remove();
+  const logo = state.config && state.config.logo;
+  if(isImageLogo(logo)){
+    const img = document.createElement('img');
+    img.src = logo;
+    img.className = 'gantt-logo';
+    img.alt = 'Logo';
+    btn.appendChild(img);
+  } else if(isEmojiLogo(logo)){
+    const span = document.createElement('span');
+    span.className = 'gantt-logo-emoji';
+    span.textContent = logo;
+    btn.appendChild(span);
+  } else {
+    const tmpl = document.createElement('div');
+    tmpl.innerHTML = DEFAULT_LOGO_SVG;
+    btn.appendChild(tmpl.firstChild);
+  }
 }
 
 // ----- Roadmap title inline rename -----
