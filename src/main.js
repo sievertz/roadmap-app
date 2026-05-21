@@ -7,7 +7,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getVersion } from "@tauri-apps/api/app";
 import { check } from "@tauri-apps/plugin-updater";
-import { ask } from "@tauri-apps/plugin-dialog";
+import { ask, message } from "@tauri-apps/plugin-dialog";
 import { relaunch } from "@tauri-apps/plugin-process";
 
 // ----- Constants -----
@@ -73,6 +73,70 @@ const CLICK_DELAY_MS = 220;
 // ----- Helpers -----
 
 function deepClone(o){ return JSON.parse(JSON.stringify(o)); }
+
+// ----- Undo/Redo -----
+
+const undoStack = [];
+const redoStack = [];
+const MAX_UNDO = 50;
+
+function snapshotState(){
+  return {
+    config: deepClone(state.config),
+    initiatives: deepClone(state.initiatives),
+    legend: deepClone(state.legend)
+  };
+}
+
+// Call BEFORE a user-initiated mutation. Clears the redo stack.
+function captureSnapshot(){
+  undoStack.push(snapshotState());
+  if(undoStack.length > MAX_UNDO) undoStack.shift();
+  redoStack.length = 0;
+}
+
+function applySnapshot(snap){
+  state.config = snap.config;
+  state.initiatives = snap.initiatives;
+  state.legend = snap.legend;
+  state.selected = null;
+  invalidateCache();
+}
+
+function appUndo(){
+  if(undoStack.length === 0) return false;
+  redoStack.push(snapshotState());
+  if(redoStack.length > MAX_UNDO) redoStack.shift();
+  applySnapshot(undoStack.pop());
+  render();
+  scheduleAutosave();
+  updateWindowTitle();
+  return true;
+}
+
+function appRedo(){
+  if(redoStack.length === 0) return false;
+  undoStack.push(snapshotState());
+  if(undoStack.length > MAX_UNDO) undoStack.shift();
+  applySnapshot(redoStack.pop());
+  render();
+  scheduleAutosave();
+  updateWindowTitle();
+  return true;
+}
+
+// Called from the Edit > Undo/Redo menu items. If the user is currently
+// typing in a text input or textarea, forward to the input's native undo
+// (so they can undo individual keystrokes), otherwise apply app-level undo.
+function handleUndoShortcut(kind){
+  const active = document.activeElement;
+  const isText = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable);
+  if(isText){
+    try { document.execCommand(kind); } catch(e){}
+    return;
+  }
+  if(kind === 'redo') appRedo(); else appUndo();
+}
 
 function months(){
   if(cachedMonths) return cachedMonths;
@@ -146,6 +210,7 @@ function canRemoveYear(yearGroup){
 }
 
 function addYearAtEnd(){
+  captureSnapshot();
   state.config.endYear++;
   state.config.endMonth = 12;
   invalidateCache();
@@ -153,6 +218,7 @@ function addYearAtEnd(){
 }
 
 function removeYear(yearGroup){
+  captureSnapshot();
   const ys = years();
   const isFirst = yearGroup.label === ys[0].label;
   const numMonths = yearGroup.span;
@@ -545,6 +611,7 @@ function renderGrid(){
         confirmAction('Delete initiative',
           'Are you sure you want to delete "' + init.label + '"? This cannot be undone.',
           () => {
+            captureSnapshot();
             state.initiatives = state.initiatives.filter(x => x.id !== init.id);
             if(state.selected === init.id) state.selected = null;
             render();
@@ -801,6 +868,7 @@ function reorderInitiatives(srcId, targetId, position){
   if(srcId === targetId) return;
   const srcIdx = state.initiatives.findIndex(x => x.id === srcId);
   if(srcIdx === -1) return;
+  captureSnapshot();
   const [item] = state.initiatives.splice(srcIdx, 1);
   let targetIdx = state.initiatives.findIndex(x => x.id === targetId);
   if(targetIdx === -1){
@@ -841,6 +909,7 @@ function onPointerMove(e){
   const deltaX = e.clientX - dragState.startX;
   if(!dragState.dragged && Math.abs(deltaX) > 4){
     dragState.dragged = true;
+    captureSnapshot(); // user actually moving - record state for undo
     document.body.style.cursor = dragState.handle === 'move' ? 'grabbing' : 'ew-resize';
   }
   if(!dragState.dragged) return;
@@ -912,7 +981,9 @@ function renderLegend(){
     colorInput.type = 'color';
     colorInput.value = lg.color;
     colorInput.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0;margin:0';
+    let colorChanged = false;
     colorInput.addEventListener('input', e => {
+      if(!colorChanged){ captureSnapshot(); colorChanged = true; }
       lg.color = e.target.value;
       render();
     });
@@ -974,7 +1045,10 @@ function renderLegend(){
 
 function saveLegendEdit(id, value){
   const lg = legendFor(id);
-  if(lg && value.trim()) lg.label = value.trim();
+  if(lg && value.trim() && lg.label !== value.trim()){
+    captureSnapshot();
+    lg.label = value.trim();
+  }
   state.editingLegend = null;
   render();
 }
@@ -994,6 +1068,7 @@ function saveLegendAdd(){
   const label = document.getElementById('legend-name-input').value.trim();
   const color = document.getElementById('legend-color-input').value;
   if(!label) return;
+  captureSnapshot();
   const id = 'custom_' + Date.now();
   state.legend.push({id, label, color});
   closeLegendAdd();
@@ -1009,6 +1084,7 @@ function removeLegendConfirm(lg){
   confirmAction('Delete label', body, () => {
     const idx = state.legend.findIndex(x => x.id === lg.id);
     if(idx === -1) return;
+    captureSnapshot();
     state.legend.splice(idx, 1);
     const fallback = state.legend[0];
     if(fallback){
@@ -1043,7 +1119,10 @@ function commitInlineRename(value){
   const init = findInit(renamingId);
   if(init){
     const trimmed = (value || '').trim();
-    if(trimmed) init.label = uniqueInitName(trimmed, init.id);
+    if(trimmed && trimmed !== init.label){
+      captureSnapshot();
+      init.label = uniqueInitName(trimmed, init.id);
+    }
   }
   renamingId = null;
   render();
@@ -1111,6 +1190,7 @@ function updatePreview(){
 function applyChanges(){
   const init = findInit(state.selected);
   if(!init) return;
+  captureSnapshot();
   const newLabel = document.getElementById('name-input').value.trim();
   if(newLabel) init.label = uniqueInitName(newLabel, init.id);
   init.type = document.getElementById('type-select').value;
@@ -1131,6 +1211,7 @@ function deleteInit(){
   confirmAction('Delete initiative',
     'Are you sure you want to delete "' + init.label + '"? This cannot be undone.',
     () => {
+      captureSnapshot();
       state.initiatives = state.initiatives.filter(x => x.id !== state.selected);
       state.selected = null;
       render();
@@ -1159,10 +1240,14 @@ function saveYearNotes(){
   if(!yearNotesEditingYear) return;
   if(!state.config.yearNotes) state.config.yearNotes = {};
   const val = document.getElementById('year-notes-input').value;
-  if(val.trim()){
-    state.config.yearNotes[yearNotesEditingYear] = val;
-  } else {
-    delete state.config.yearNotes[yearNotesEditingYear];
+  const current = state.config.yearNotes[yearNotesEditingYear] || '';
+  if(val !== current){
+    captureSnapshot();
+    if(val.trim()){
+      state.config.yearNotes[yearNotesEditingYear] = val;
+    } else {
+      delete state.config.yearNotes[yearNotesEditingYear];
+    }
   }
   closeYearNotesModal();
   render();
@@ -1170,12 +1255,16 @@ function saveYearNotes(){
 
 function clearYearNotes(){
   if(!yearNotesEditingYear) return;
-  if(state.config.yearNotes) delete state.config.yearNotes[yearNotesEditingYear];
+  if(state.config.yearNotes && state.config.yearNotes[yearNotesEditingYear]){
+    captureSnapshot();
+    delete state.config.yearNotes[yearNotesEditingYear];
+  }
   closeYearNotesModal();
   render();
 }
 
 function addInit(){
+  captureSnapshot();
   const id = 'new_' + Date.now();
   const qs = months();
   const startPos = Math.min(qs.length - 1, Math.floor(qs.length / 2));
@@ -1660,6 +1749,8 @@ function wireEvents(){
         document.getElementById('modal').classList.remove('open');
       } else if(document.getElementById('about-modal').classList.contains('open')){
         document.getElementById('about-modal').classList.remove('open');
+      } else if(document.getElementById('shortcuts-modal').classList.contains('open')){
+        document.getElementById('shortcuts-modal').classList.remove('open');
       } else if(document.getElementById('year-notes-modal-backdrop').classList.contains('open')){
         closeYearNotesModal();
       } else if(document.getElementById('legend-modal-backdrop').classList.contains('open')){
@@ -1709,6 +1800,16 @@ function wireEvents(){
     }
   });
 
+  // Shortcuts modal close
+  document.getElementById('shortcuts-close').addEventListener('click', () => {
+    document.getElementById('shortcuts-modal').classList.remove('open');
+  });
+  document.getElementById('shortcuts-modal').addEventListener('click', e => {
+    if(e.target === document.getElementById('shortcuts-modal')){
+      document.getElementById('shortcuts-modal').classList.remove('open');
+    }
+  });
+
   // GitHub link in About modal: open in system browser via Tauri open_external
   document.getElementById('about-github').addEventListener('click', async e => {
     e.preventDefault();
@@ -1735,6 +1836,11 @@ async function wireMenuEvents(){
   await listen('menu:export_html', menuExportHtml);
   await listen('menu:export_svg', menuExportSvg);
   await listen('menu:check_updates', () => checkForUpdates({ verbose: true }));
+  await listen('menu:undo', () => handleUndoShortcut('undo'));
+  await listen('menu:redo', () => handleUndoShortcut('redo'));
+  await listen('menu:shortcuts', () => {
+    document.getElementById('shortcuts-modal').classList.add('open');
+  });
   await listen('menu:theme', (event) => {
     const theme = event.payload; // 'auto' | 'light' | 'dark'
     applyTheme(theme);
@@ -1787,8 +1893,12 @@ function startRoadmapTitleRename(){
   const commit = () => {
     if(done) return; done = true;
     const val = input.value.trim();
-    state.config.title = val || '';
-    scheduleAutosave();
+    const newTitle = val || '';
+    if(newTitle !== (state.config.title || '')){
+      captureSnapshot();
+      state.config.title = newTitle;
+      scheduleAutosave();
+    }
     updateWindowTitle();
   };
   const cancel = () => {
@@ -1809,7 +1919,7 @@ async function checkForUpdates(opts){
   try {
     const update = await check();
     if(!update){
-      if(verbose) await ask('You are running the latest version.', { title: 'No updates', kind: 'info', okLabel: 'OK' });
+      if(verbose) await message('You are running the latest version.', { title: 'No updates', kind: 'info', okLabel: 'OK' });
       return;
     }
     const wantUpdate = await ask(
@@ -1823,7 +1933,7 @@ async function checkForUpdates(opts){
   } catch(e){
     console.error('[Roadmap] Update check failed:', e);
     if(verbose){
-      await ask('Could not check for updates: ' + (e && e.message ? e.message : e), { title: 'Update check failed', kind: 'warning', okLabel: 'OK' });
+      await message('Could not check for updates: ' + (e && e.message ? e.message : e), { title: 'Update check failed', kind: 'warning', okLabel: 'OK' });
     }
   }
 }

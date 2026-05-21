@@ -260,6 +260,12 @@ body:has(.welcome.active) .gantt-actions{display:none}
 .about-link{color:var(--info-text);text-decoration:none;font-size:12px;font-weight:500}
 .about-link:hover{text-decoration:underline}
 
+/* Keyboard shortcuts modal */
+.kbd-section{margin-bottom:14px}
+.kbd-section h4{font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.04em;margin:0 0 6px;padding:0}
+.kbd-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-1);padding:3px 0}
+.kbd-row kbd{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;font-size:11px;font-weight:500;color:var(--text-2);background:var(--bg-soft);border:1px solid var(--border-2);border-radius:4px;padding:2px 6px;min-width:24px;text-align:center}
+
 /* Dependency indicator dot on Gantt bars */
 .dep-dot{position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:#D85A30;border:2px solid var(--bg-card);z-index:2;pointer-events:auto;cursor:help}
 

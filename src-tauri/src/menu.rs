@@ -133,8 +133,18 @@ pub fn create_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .build()?;
 
     let edit_menu = SubmenuBuilder::new(app, "Edit")
-        .item(&PredefinedMenuItem::undo(app, None)?)
-        .item(&PredefinedMenuItem::redo(app, None)?)
+        .item(
+            &MenuItemBuilder::new("Undo")
+                .id("edit:undo")
+                .accelerator("CmdOrCtrl+Z")
+                .build(app)?,
+        )
+        .item(
+            &MenuItemBuilder::new("Redo")
+                .id("edit:redo")
+                .accelerator("CmdOrCtrl+Shift+Z")
+                .build(app)?,
+        )
         .separator()
         .item(&PredefinedMenuItem::cut(app, None)?)
         .item(&PredefinedMenuItem::copy(app, None)?)
@@ -162,6 +172,13 @@ pub fn create_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .build()?;
 
     let help_menu = SubmenuBuilder::new(app, "Help")
+        .item(
+            &MenuItemBuilder::new("Keyboard Shortcuts")
+                .id("help:shortcuts")
+                .accelerator("CmdOrCtrl+/")
+                .build(app)?,
+        )
+        .separator()
         .item(
             &MenuItemBuilder::new("Check for Updates…")
                 .id("help:check_updates")
@@ -214,6 +231,9 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
         }
         "help:about" => emit_to_focused(app, "menu:about", ()),
         "help:check_updates" => emit_to_focused(app, "menu:check_updates", ()),
+        "help:shortcuts" => emit_to_focused(app, "menu:shortcuts", ()),
+        "edit:undo" => emit_to_focused(app, "menu:undo", ()),
+        "edit:redo" => emit_to_focused(app, "menu:redo", ()),
         other if other.starts_with("file:recent:") => {
             if let Some(idx_str) = other.strip_prefix("file:recent:") {
                 if let Ok(idx) = idx_str.parse::<usize>() {

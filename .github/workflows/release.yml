@@ -46,7 +46,20 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: ${{ github.ref_name }}
-          releaseBody: 'See the assets to download this version and install.'
+          releaseBody: |
+            **Installing for the first time? Run this once after dragging to /Applications:**
+
+            ```
+            xattr -dr com.apple.quarantine /Applications/Roadmap.app
+            ```
+
+            See the [README](https://github.com/sievertz/roadmap-app#first-launch-important) for why. Auto-updates from inside the app don't need this.
+
+            ---
+
+            ## What's new
+
+            _Add release notes here before publishing._
           releaseDraft: true
           prerelease: false
           args: --target aarch64-apple-darwin
