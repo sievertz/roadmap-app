@@ -26,18 +26,45 @@ Why this happens: macOS marks downloaded files as quarantined and requires eithe
 
 ## Features
 
+### Editing
+- Click an initiative name to open details, double-click to rename inline
+- Drag a bar to move it in time, drag its edges to resize, drag the row number to reorder
+- Delete an initiative via the × that appears on row hover
+- Undo and redo (Cmd+Z / Cmd+Shift+Z) for every destructive action
+- Roadmap title editable separately from filename (click the heading at the top)
+- Editable legend with colour picker, custom categories
+
+### Edit modal
+- Category, dev weeks estimate, JIRA link (with open-in-browser button), dependencies, description
+- Bars with the dependencies field set show a small orange dot indicator
+- Cmd+Enter applies, Esc cancels
+
+### Timeline
+- Month-level Gantt with year/quarter/month bands
+- Add or remove years dynamically
+- Click the pencil on a year band to attach notes for that year
+- Search box in the INITIATIVE header filters rows live
+
+### Files and windows
 - Multi-window: each .roadmap file opens in its own window
 - File association: double-clicking a .roadmap file in Finder opens the app
 - Auto-save with debounce to disk
-- Interactive Gantt grid: drag bars to move, drag edges to resize, drag the row number to reorder
-- Inline rename for initiatives (double-click the name)
-- Edit modal: category, dev weeks, JIRA link with open-in-browser, dependencies, description
-- Month-level timeline with year/quarter/month bands, add or remove years dynamically
-- Editable legend with colour picker
+- Opening an already-open file focuses the existing window
 - Welcome view with recent files, auto-opens the most recent file on startup
-- SVG export for presentations (vector, scales infinitely)
-- Native macOS menu with Recent submenu
-- Light and dark mode (follows system setting)
+- Recents list filters out files that have been deleted from disk
+
+### Export and distribution
+- SVG export for presentations (vector, scales infinitely, matches current theme)
+- HTML export
+- Cmd+P opens the macOS print dialog with a clean print layout
+- Auto-updater pulls new versions from GitHub Releases on app start
+
+### Appearance
+- Light and dark mode, follows system by default
+- Manual override under View → Appearance
+- Warm paper-tone light palette
+- Responsive row heights for large displays
+- Floating legend that stays visible while scrolling
 
 ## Prerequisites
 
@@ -102,6 +129,12 @@ npm run tauri build -- --target universal-apple-darwin
 | Cmd+Shift+S | Save As |
 | Cmd+Shift+E | Export as HTML |
 | Cmd+Shift+P | Export as SVG |
+| Cmd+P | Print |
+| Cmd+Z | Undo |
+| Cmd+Shift+Z | Redo |
+| Cmd+/ | Keyboard shortcuts cheat sheet |
+
+Cmd+Enter applies in any modal, Esc closes it.
 
 ## Distribution and signing
 
