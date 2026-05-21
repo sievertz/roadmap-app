@@ -1914,11 +1914,7 @@ async function checkForUpdates(opts){
       if(verbose) await message('You are running the latest version.', { title: 'No updates', kind: 'info', okLabel: 'OK' });
       return;
     }
-    const wantUpdate = await ask(
-      `Roadmap ${update.version} is available. Install and restart now?\n\n` +
-      `See what's new at:\nhttps://github.com/sievertz/roadmap-app/releases/tag/v${update.version}`,
-      { title: 'Update available', kind: 'info', okLabel: 'Install', cancelLabel: 'Later' }
-    );
+    const wantUpdate = await showUpdateModal(update.version);
     if(wantUpdate){
       await update.downloadAndInstall();
       await relaunch();
@@ -1929,6 +1925,43 @@ async function checkForUpdates(opts){
       await message('Could not check for updates: ' + (e && e.message ? e.message : e), { title: 'Update check failed', kind: 'warning', okLabel: 'OK' });
     }
   }
+}
+
+// Show the in-app update modal. Returns true if user clicked Install.
+function showUpdateModal(version){
+  return new Promise(resolve => {
+    const backdrop = document.getElementById('update-modal');
+    const versionText = document.getElementById('update-version-text');
+    const releaseLink = document.getElementById('update-release-notes');
+    const installBtn = document.getElementById('update-install');
+    const laterBtn = document.getElementById('update-later');
+
+    const releaseUrl = `https://github.com/sievertz/roadmap-app/releases/tag/v${version}`;
+    versionText.textContent = `Roadmap ${version} is available.`;
+
+    const cleanup = (answer) => {
+      backdrop.classList.remove('open');
+      installBtn.removeEventListener('click', onInstall);
+      laterBtn.removeEventListener('click', onLater);
+      releaseLink.removeEventListener('click', onLink);
+      backdrop.removeEventListener('click', onBackdrop);
+      resolve(answer);
+    };
+    const onInstall = () => cleanup(true);
+    const onLater = () => cleanup(false);
+    const onBackdrop = (e) => { if(e.target === backdrop) cleanup(false); };
+    const onLink = async (e) => {
+      e.preventDefault();
+      try { await invoke('open_external', { url: releaseUrl }); }
+      catch(err){ console.error('[Roadmap] open_external failed:', err); }
+    };
+
+    installBtn.addEventListener('click', onInstall);
+    laterBtn.addEventListener('click', onLater);
+    releaseLink.addEventListener('click', onLink);
+    backdrop.addEventListener('click', onBackdrop);
+    backdrop.classList.add('open');
+  });
 }
 
 // ----- Theme -----
