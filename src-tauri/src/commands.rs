@@ -131,6 +131,63 @@ pub async fn save_dialog(app: AppHandle, default_name: Option<String>) -> Result
     }))
 }
 
+// Image picker dialog - returns selected image file path or None
+#[tauri::command]
+pub async fn pick_image_dialog(app: AppHandle) -> Result<Option<String>, String> {
+    let file_path = app
+        .dialog()
+        .file()
+        .add_filter("Image", &["png", "jpg", "jpeg", "svg", "gif", "webp"])
+        .blocking_pick_file();
+    Ok(file_path.and_then(|fp| match fp {
+        FilePath::Path(p) => Some(p.to_string_lossy().to_string()),
+        _ => None,
+    }))
+}
+
+// Read an image file as a data URL (base64-encoded) for use as logo etc.
+#[tauri::command]
+pub fn read_image_as_data_url(path: String, max_bytes: u64) -> Result<String, String> {
+    let meta = fs::metadata(&path).map_err(|e| e.to_string())?;
+    if meta.len() > max_bytes {
+        return Err(format!(
+            "File is {} KB, max {} KB",
+            meta.len() / 1024,
+            max_bytes / 1024
+        ));
+    }
+    let bytes = fs::read(&path).map_err(|e| e.to_string())?;
+    let mime = mime_from_path(&path);
+    Ok(format!("data:{};base64,{}", mime, base64_encode(&bytes)))
+}
+
+fn mime_from_path(path: &str) -> &'static str {
+    let lower = path.to_lowercase();
+    if lower.ends_with(".png") { "image/png" }
+    else if lower.ends_with(".jpg") || lower.ends_with(".jpeg") { "image/jpeg" }
+    else if lower.ends_with(".svg") { "image/svg+xml" }
+    else if lower.ends_with(".gif") { "image/gif" }
+    else if lower.ends_with(".webp") { "image/webp" }
+    else { "application/octet-stream" }
+}
+
+// Lightweight base64 encoder (no external crate needed)
+fn base64_encode(bytes: &[u8]) -> String {
+    const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity((bytes.len() + 2) / 3 * 4);
+    for chunk in bytes.chunks(3) {
+        let b0 = chunk[0] as u32;
+        let b1 = chunk.get(1).copied().unwrap_or(0) as u32;
+        let b2 = chunk.get(2).copied().unwrap_or(0) as u32;
+        let triple = (b0 << 16) | (b1 << 8) | b2;
+        out.push(CHARS[((triple >> 18) & 63) as usize] as char);
+        out.push(CHARS[((triple >> 12) & 63) as usize] as char);
+        out.push(if chunk.len() > 1 { CHARS[((triple >> 6) & 63) as usize] as char } else { '=' });
+        out.push(if chunk.len() > 2 { CHARS[(triple & 63) as usize] as char } else { '=' });
+    }
+    out
+}
+
 // Export-as-HTML dialog
 #[tauri::command]
 pub async fn export_html_dialog(app: AppHandle, default_name: Option<String>) -> Result<Option<String>, String> {

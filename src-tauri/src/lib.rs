@@ -41,6 +41,8 @@ pub fn run() {
             commands::clear_recent_files,
             commands::set_window_title,
             commands::open_external,
+            commands::pick_image_dialog,
+            commands::read_image_as_data_url,
             commands::register_window_file,
             commands::unregister_window,
             commands::find_window_for_file,

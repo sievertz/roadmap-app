@@ -1977,26 +1977,16 @@ function updateLogoPreview(kind, value){
   }
 }
 
-function pickLogoImage(){
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/png,image/jpeg,image/svg+xml,image/gif,image/webp';
-  input.addEventListener('change', e => {
-    const file = e.target.files && e.target.files[0];
-    if(!file) return;
-    if(file.size > 500_000){
-      alert('Logo must be smaller than 500 KB. Got ' + Math.round(file.size/1024) + ' KB.');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = ev => {
-      // Image picked - clear emoji input so they don't conflict
-      document.getElementById('logo-emoji-input').value = '';
-      updateLogoPreview('image', ev.target.result);
-    };
-    reader.readAsDataURL(file);
-  });
-  input.click();
+async function pickLogoImage(){
+  try {
+    const path = await invoke('pick_image_dialog');
+    if(!path) return;
+    const dataUrl = await invoke('read_image_as_data_url', { path, maxBytes: 500_000 });
+    document.getElementById('logo-emoji-input').value = '';
+    updateLogoPreview('image', dataUrl);
+  } catch(e){
+    alert('Could not load image: ' + (e && e.message ? e.message : e));
+  }
 }
 
 function saveLogoModal(){

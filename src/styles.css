@@ -74,8 +74,11 @@ html[data-theme="dark"], html[data-theme="dark"] body { background: #1a1a1a; }
 .gantt-logo-btn{background:transparent;border:none;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;position:relative;border-radius:4px;transition:background .12s}
 .gantt-logo-btn:hover{background:var(--bg-card)}
 .gantt-logo{width:26px;height:26px;flex-shrink:0;border-radius:4px;display:block}
-img.gantt-logo{object-fit:contain;background:var(--bg-card)}
+img.gantt-logo{object-fit:contain}
 .gantt-logo-emoji{font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0}
+.logo-emoji-input{width:100%;font-size:32px;text-align:center;padding:6px 10px;border:1px solid var(--border-1);border-radius:var(--radius-md);background:var(--bg-card);color:var(--text-1);font-family:inherit;outline:none;line-height:1.2}
+.logo-emoji-input:focus{border-color:var(--info-border);box-shadow:0 0 0 2px rgba(24,95,165,0.2)}
+.logo-emoji-input::placeholder{font-size:13px;color:var(--text-3);opacity:0.7}
 .logo-current{display:flex;align-items:center;justify-content:center;width:60px;height:60px;margin:0 auto;border:1px solid var(--border-3);border-radius:var(--radius-md);background:var(--bg-card)}
 .logo-preview-image{width:40px;height:40px;object-fit:contain;border-radius:4px}
 .logo-preview-emoji{font-size:36px;line-height:1}
