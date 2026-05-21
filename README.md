@@ -8,9 +8,21 @@ A native macOS app for interactive product roadmaps. Built with Tauri 2 (Rust + 
 
 Grab the latest release from the [Releases page](https://github.com/sievertz/roadmap-app/releases/latest). Drag Roadmap.app to Applications.
 
-The app is currently unsigned. The first time you open it, macOS Gatekeeper will warn that the developer is not verified. Right-click the app in Applications, choose Open, and confirm. After that it launches normally.
-
 Built for Apple Silicon (M1/M2/M3/M4). Open an issue if you need an Intel build.
+
+### First launch (important)
+
+The app is not Apple-signed. On macOS Sequoia and newer, Gatekeeper will show a `"Roadmap" is damaged and can't be opened` error and refuse to launch it, even via right-click → Open.
+
+To fix this, run the following in Terminal once:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Roadmap.app
+```
+
+After this you can open the app normally by double-clicking. The command only needs to be run once per install, and once per future major update. Auto-updates from inside the app are not affected.
+
+Why this happens: macOS marks downloaded files as quarantined and requires either an Apple Developer signature or this manual override before they can run.
 
 ## Features
 

@@ -1852,12 +1852,12 @@ async function init(){
   wireEvents();
   await wireMenuEvents();
 
-  // Unregister this window from the file-window map when it closes
+  // Unregister this window from the file-window map when it closes.
+  // Use fire-and-forget so the async invoke doesn't block window close.
   try {
     const win = getCurrentWindow();
-    await win.onCloseRequested(async () => {
-      try { await invoke('unregister_window', { label: win.label }); }
-      catch(e){ /* ignore - window is closing anyway */ }
+    await win.onCloseRequested(() => {
+      invoke('unregister_window', { label: win.label }).catch(() => {});
     });
   } catch(e){
     console.warn('[Roadmap] could not register close listener:', e);
