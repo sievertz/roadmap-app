@@ -5,6 +5,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { check } from "@tauri-apps/plugin-updater";
+import { ask } from "@tauri-apps/plugin-dialog";
+import { relaunch } from "@tauri-apps/plugin-process";
 
 // ----- Constants -----
 
@@ -1797,6 +1800,26 @@ function startRoadmapTitleRename(){
   input.addEventListener('blur', commit);
 }
 
+// ----- Auto-updater -----
+
+async function checkForUpdates(){
+  try {
+    const update = await check();
+    if(!update) return; // already on latest
+    const wantUpdate = await ask(
+      `Roadmap ${update.version} is available.\n\n${update.body || 'Install and restart now?'}`,
+      { title: 'Update available', kind: 'info', okLabel: 'Install', cancelLabel: 'Later' }
+    );
+    if(wantUpdate){
+      await update.downloadAndInstall();
+      await relaunch();
+    }
+  } catch(e){
+    // Silent failure - don't bother user if endpoint is unreachable, etc.
+    console.error('[Roadmap] Update check failed:', e);
+  }
+}
+
 // ----- Theme -----
 
 const THEME_KEY = 'roadmap.theme';
@@ -1865,6 +1888,15 @@ async function init(){
 
   await updateWindowTitle();
   render();
+
+  // Check for updates once per app launch, only from the main window so we
+  // don't spam multiple checks if several windows are open.
+  try {
+    const win = getCurrentWindow();
+    if(win.label === 'main'){
+      setTimeout(checkForUpdates, 2000);
+    }
+  } catch(e){}
 }
 
 init().catch(e => {
