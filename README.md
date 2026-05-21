@@ -32,10 +32,11 @@ Why this happens: macOS marks downloaded files as quarantined and requires eithe
 - Delete an initiative via the × that appears on row hover
 - Undo and redo (Cmd+Z / Cmd+Shift+Z) for every destructive action
 - Roadmap title editable separately from filename (click the heading at the top)
+- Custom logo per roadmap: click the logo to pick an emoji or upload an image (PNG/JPG/SVG/GIF/WebP, max 500 KB)
 - Editable legend with colour picker, custom categories
 
 ### Edit modal
-- Category, dev weeks estimate, JIRA link (with open-in-browser button), dependencies, description
+- Category (with colour swatch showing the selected category's colour), dev weeks estimate, JIRA link (with open-in-browser button), dependencies, description
 - Bars with the dependencies field set show a small orange dot indicator
 - Cmd+Enter applies, Esc cancels
 
@@ -51,6 +52,7 @@ Why this happens: macOS marks downloaded files as quarantined and requires eithe
 - Auto-save with debounce to disk
 - Opening an already-open file focuses the existing window
 - Welcome view with recent files, auto-opens the most recent file on startup
+- Label column auto-fits to the longest initiative name on file open
 - Recents list filters out files that have been deleted from disk
 
 ### Export and distribution
@@ -74,7 +76,7 @@ On your Mac:
 # Rust toolchain
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-# Node.js (16+)
+# Node.js 20+
 brew install node
 
 # Xcode Command Line Tools
@@ -118,6 +120,31 @@ rustup target add x86_64-apple-darwin
 npm run tauri build -- --target universal-apple-darwin
 ```
 
+## Releasing a new version
+
+GitHub Actions builds and signs releases automatically when you push a git tag. The local build is only a sanity check that the code compiles.
+
+```bash
+cd ~/Projects/roadmap-app
+
+# Bump version in three files: package.json, src-tauri/Cargo.toml, src-tauri/tauri.conf.json
+# Then verify the build compiles:
+npm run tauri build 2>&1 | tail -5
+
+# Commit, tag and push
+git add .
+git commit -m "Release vX.Y.Z: brief description"
+git tag vX.Y.Z
+git push origin main --tags
+```
+
+GitHub Actions then:
+
+1. Builds and signs the release using TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD secrets stored in repo settings
+2. Creates a draft release with .dmg, .app.tar.gz, .sig and latest.json attached
+
+Then on GitHub: open the draft, add release notes, click Publish. Auto-updaters on existing installations pick up the new version the next time the app starts.
+
 ## Menu shortcuts
 
 | Shortcut | Action |
@@ -138,9 +165,9 @@ Cmd+Enter applies in any modal, Esc closes it.
 
 ## Distribution and signing
 
-An unsigned .dmg works for internal sharing. The recipient right-clicks the .app and chooses Open the first time to bypass Gatekeeper.
+The .dmg is currently unsigned by Apple. Recipients need to run the xattr command from the [First launch](#first-launch-important) section once after installing.
 
-For public distribution you need an Apple Developer account (around USD 99 per year) plus a Developer ID certificate.
+For frictionless distribution without the xattr step, you need an Apple Developer account (around USD 99 per year) plus a Developer ID certificate. Not currently set up for this project.
 
 ### One-time setup
 
@@ -172,54 +199,17 @@ Tauri notarises automatically when these env vars are set.
 
 ## Auto-updater
 
-The plumbing is in place but requires setup before the first release.
+Active. The app checks for new versions on each launch and prompts users to install when one is available.
 
-### Generate signature key (once)
+How it works:
 
-```bash
-npm run tauri signer generate -- -w ~/.tauri/roadmap.key
-```
+1. App pings `https://github.com/sievertz/roadmap-app/releases/latest/download/latest.json` on startup
+2. If the JSON contains a newer version than the installed one, an update modal opens with a link to release notes
+3. On Install, the app downloads the new .app.tar.gz, verifies its signature against the public key embedded in tauri.conf.json, unpacks it and relaunches
 
-### Configure tauri.conf.json
+GitHub Actions handles signing automatically via repository secrets (`TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`). See the [Releasing a new version](#releasing-a-new-version) section above.
 
-Set the public key in `plugins.updater.pubkey`:
-
-```json
-"updater": {
-  "pubkey": "PUBLIC_KEY_FROM_ABOVE",
-  "endpoints": ["https://github.com/sievertz/roadmap-app/releases/latest/download/latest.json"]
-}
-```
-
-### Build with signing
-
-```bash
-export TAURI_SIGNING_PRIVATE_KEY=~/.tauri/roadmap.key
-export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="password-if-you-set-one"
-npm run tauri build
-```
-
-### Publish a release
-
-1. Create a GitHub release with tag `v0.1.0`
-2. Upload the DMG file
-3. Upload a `latest.json` with this format:
-
-```json
-{
-  "version": "0.1.0",
-  "notes": "Description of changes",
-  "pub_date": "2026-05-20T12:00:00Z",
-  "platforms": {
-    "darwin-aarch64": {
-      "signature": "CONTENTS_OF_DMG.sig",
-      "url": "https://github.com/sievertz/roadmap-app/releases/download/v0.1.0/Roadmap_0.1.0_aarch64.dmg"
-    }
-  }
-}
-```
-
-When a user's app starts it checks the endpoint URL, compares versions and shows an update dialog if a new version is available.
+Users can also manually trigger a check via Help → Check for Updates….
 
 ## Project structure
 
@@ -251,13 +241,18 @@ roadmap-app/
 
 ```json
 {
-  "v": 5,
+  "v": 6,
   "config": {
     "startYear": 2026,
     "startMonth": 1,
     "endYear": 2027,
     "endMonth": 12,
-    "labelColumnWidth": 200
+    "labelColumnWidth": 220,
+    "title": "Product Roadmap 2026",
+    "logo": "🚀",
+    "yearNotes": {
+      "2026": "Notes about this year"
+    }
   },
   "initiatives": [
     {
@@ -279,6 +274,12 @@ roadmap-app/
   "savedAt": "2026-05-20T12:00:00.000Z"
 }
 ```
+
+Optional config fields:
+
+- `title`: display name shown in the title bar, independent of the filename. Falls back to filename without extension if not set
+- `logo`: either a `data:image/...;base64,...` URL or a short emoji string (e.g. `🚀`). Falls back to the default SVG logo if not set
+- `yearNotes`: object mapping year strings to notes text
 
 The schema version (`v` field) is used for migration when reading older files.
 

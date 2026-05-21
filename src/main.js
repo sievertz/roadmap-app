@@ -1178,11 +1178,24 @@ function renderEditPanel(){
     const o = document.createElement('option');
     o.value = lg.id;
     o.textContent = lg.label;
+    // Tint option background (works in some WebKit configurations; harmless if not)
+    o.style.backgroundColor = lg.color;
+    o.style.color = '#ffffff';
     if(lg.id === init.type) o.selected = true;
     typeSelect.appendChild(o);
   });
+  updateCategoryColorSwatch();
+  typeSelect.onchange = updateCategoryColorSwatch;
 
   updatePreview();
+}
+
+function updateCategoryColorSwatch(){
+  const select = document.getElementById('type-select');
+  const swatch = document.getElementById('category-color-swatch');
+  if(!select || !swatch) return;
+  const lg = legendFor(select.value);
+  swatch.style.background = (lg && lg.color) || 'transparent';
 }
 
 function updatePreview(){

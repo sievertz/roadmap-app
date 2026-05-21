@@ -284,6 +284,11 @@ body:has(.welcome.active) .gantt-actions{display:none}
 .row-label:hover .row-remove{opacity:0.55}
 .row-remove:hover{opacity:1 !important;color:var(--danger-text);background:var(--danger-bg)}
 
+/* Category select: small colored swatch indicates the selected category's colour */
+.category-select-wrapper{display:flex;align-items:center;gap:8px}
+.category-color-swatch{width:16px;height:16px;border-radius:3px;flex-shrink:0;border:1px solid rgba(0,0,0,0.08)}
+.category-select-wrapper select{flex:1;min-width:0}
+
 /* Search input in sticky-col header (replaces 'Initiative' label) */
 .gh.sticky-col.search-cell{padding:0;text-align:center}
 .search-input{width:100%;height:100%;border:none;background:transparent;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-2);font-family:inherit;letter-spacing:.02em;text-transform:uppercase;outline:none;text-align:center}
