@@ -30,8 +30,8 @@ const LABEL_MIN_WIDTH = 100;
 const LABEL_MAX_WIDTH = 500;
 const MONTH_WIDTH_PX = 60;
 
-const YEAR_BAND_COLORS = ['#2F7060', '#1E4F44', '#133933', '#082823', '#2F7060', '#1E4F44'];
-const QUARTER_CELL_COLORS = ['#EFF6F3', '#DCEBE6', '#BCD8D0', '#9CC4B8', '#EFF6F3', '#DCEBE6'];
+const YEAR_BAND_COLORS = ['#2F7060', '#2F7060', '#2F7060', '#2F7060', '#2F7060', '#2F7060'];
+const QUARTER_CELL_COLORS = ['#EFF6F3', '#EFF6F3', '#EFF6F3', '#EFF6F3', '#EFF6F3', '#EFF6F3'];
 
 const LEGEND_DEFAULTS = [
   {id:'ongoing', label:'Ongoing', color:'#888780'},
@@ -473,10 +473,22 @@ function renderGrid(){
   grid.style.gridTemplateColumns = labelW + 'px repeat(' + qs.length + ', minmax(' + MONTH_WIDTH_PX + 'px, 1fr))';
   grid.style.minWidth = (labelW + qs.length * MONTH_WIDTH_PX) + 'px';
 
-  const yb = document.createElement('div');
-  yb.className = 'gh year-band sticky-col';
-  yb.style.background = 'var(--bg-soft)';
-  grid.appendChild(yb);
+  // Compute month-indices where a new year begins (used to draw dividers)
+  const yearStartIndices = new Set();
+  let acc = 0;
+  for(let i = 0; i < ys.length; i++){
+    if(i > 0) yearStartIndices.add(acc);
+    acc += ys[i].span;
+  }
+
+  // Title cell - spans year and quarter band rows in the sticky column.
+  // Re-parents the existing .gantt-titlebar element (with logo + title) into the grid.
+  const titleCell = document.createElement('div');
+  titleCell.className = 'gh sticky-col title-cell';
+  titleCell.style.gridRow = '1 / span 2';
+  const titlebarEl = document.getElementById('gantt-titlebar');
+  if(titlebarEl) titleCell.appendChild(titlebarEl);
+  grid.appendChild(titleCell);
   ys.forEach((y, idx) => {
     const c = document.createElement('div');
     c.className = 'gh year-band';
@@ -522,11 +534,8 @@ function renderGrid(){
     grid.appendChild(c);
   });
 
-  // Quarter band (between year and month)
-  const qbBlank = document.createElement('div');
-  qbBlank.className = 'gh sticky-col quarter-band';
-  qbBlank.style.background = 'var(--bg-soft)';
-  grid.appendChild(qbBlank);
+  // Quarter band cells. The sticky-col for this row is covered by the
+  // title cell above (which spans 2 rows), so we only add the time-area cells.
   const qBands = quarterBands();
   qBands.forEach((qb) => {
     const c = document.createElement('div');
@@ -557,13 +566,15 @@ function renderGrid(){
 
   let yearIdx = 0;
   let yearMonthsUsed = 0;
-  qs.forEach((mObj) => {
+  qs.forEach((mObj, mIdx) => {
     if(yearMonthsUsed >= ys[yearIdx].span){
       yearIdx++;
       yearMonthsUsed = 0;
     }
     const c = document.createElement('div');
-    c.className = 'gh';
+    // First month of a new year (but not the very first month) gets a divider
+    const isYearStart = yearMonthsUsed === 0 && yearIdx > 0;
+    c.className = 'gh' + (isYearStart ? ' year-start' : '');
     c.style.background = QUARTER_CELL_COLORS[yearIdx % QUARTER_CELL_COLORS.length];
     c.style.color = '#133933';
     c.textContent = mObj.label;
@@ -678,7 +689,8 @@ function renderGrid(){
     const legendItem = legendFor(init.type);
     qs.forEach((_, qi) => {
       const c = document.createElement('div');
-      c.className = 'qcell' + (isDragging ? ' row-dragging' : '') + (qcellDropClass ? ' ' + qcellDropClass : '');
+      const yearStartClass = yearStartIndices.has(qi) ? ' year-start' : '';
+      c.className = 'qcell' + (isDragging ? ' row-dragging' : '') + (qcellDropClass ? ' ' + qcellDropClass : '') + yearStartClass;
       if(qi === range.s && range.s >= 0 && range.s < qs.length){
         const b = document.createElement('div');
         const cls = ['bar'];

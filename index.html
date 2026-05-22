@@ -35,17 +35,17 @@
     </div>
   </div>
 
+  <div class="gantt-titlebar" id="gantt-titlebar">
+    <button class="gantt-logo-btn" id="gantt-logo-btn" title="Click to change logo">
+      <svg class="gantt-logo" id="gantt-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="5" width="9" height="3" rx="1" fill="#378ADD"/>
+        <rect x="6" y="10.5" width="12" height="3" rx="1" fill="#1D9E75"/>
+        <rect x="10" y="16" width="10" height="3" rx="1" fill="#BA7517"/>
+      </svg>
+    </button>
+    <h1 class="gantt-title" id="gantt-title">Untitled</h1>
+  </div>
   <div class="gantt-grid-wrap">
-    <div class="gantt-titlebar">
-      <button class="gantt-logo-btn" id="gantt-logo-btn" title="Click to change logo">
-        <svg class="gantt-logo" id="gantt-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="2" y="5" width="9" height="3" rx="1" fill="#378ADD"/>
-          <rect x="6" y="10.5" width="12" height="3" rx="1" fill="#1D9E75"/>
-          <rect x="10" y="16" width="10" height="3" rx="1" fill="#BA7517"/>
-        </svg>
-      </button>
-      <h1 class="gantt-title" id="gantt-title">Untitled</h1>
-    </div>
     <div class="gantt-grid" id="grid"></div>
   </div>
 
@@ -203,12 +203,11 @@
   </div>
 
   <div class="modal-backdrop" id="update-modal">
-    <div class="modal" style="max-width:420px">
+    <div class="modal update-modal-content">
       <div class="modal-title">Update available</div>
       <div class="modal-body">
-        <span id="update-version-text">A new version of Roadmap is available.</span><br>
-        <br>
-        <a href="#" id="update-release-notes" class="about-link">View release notes →</a>
+        <div id="update-version-text">A new version of Roadmap is available.</div>
+        <a href="#" id="update-release-notes" class="about-link update-release-link">View release notes →</a>
       </div>
       <div class="modal-actions">
         <button class="btn" id="update-later">Later</button>

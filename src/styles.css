@@ -70,7 +70,11 @@ html[data-theme="dark"], html[data-theme="dark"] body { background: #1a1a1a; }
   --danger-border:#A32D2D;
 }
 .gantt-header{display:none}
-.gantt-titlebar{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--bg-soft);border-bottom:1px solid var(--border-2)}
+.gantt-titlebar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-soft);width:100%;height:100%;box-sizing:border-box;overflow:hidden}
+.title-cell{padding:0 !important;background:var(--bg-soft) !important;border-bottom:1px solid var(--border-1)}
+.title-cell .gantt-title{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.title-cell .gantt-logo,.title-cell .gantt-logo-emoji,.title-cell img.gantt-logo{width:22px;height:22px}
+.title-cell .gantt-logo-emoji{font-size:18px}
 .gantt-logo-btn{background:transparent;border:none;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;position:relative;border-radius:4px;transition:background .12s}
 .gantt-logo-btn:hover{background:var(--bg-card)}
 .gantt-logo{width:26px;height:26px;flex-shrink:0;border-radius:4px;display:block}
@@ -110,6 +114,8 @@ img.gantt-logo{object-fit:contain}
 .lbl-tag{font-size:10px;color:var(--text-3);padding:1px 6px;background:var(--bg-soft);border-radius:3px;font-weight:500;flex-shrink:0}
 .row-label.selected .lbl-tag{background:#ffffff80;color:var(--info-text)}
 .qcell{border-left:1px solid var(--border-3);border-bottom:1px solid var(--border-3);position:relative;height:var(--row-h,38px);background:var(--bg-card)}
+.qcell.year-start{border-left:1px solid var(--border-1)}
+.gh.year-start{border-left:1px solid var(--border-1)}
 .qcell.row-drop-above{box-shadow:inset 0 2px 0 0 var(--info-text)}
 .qcell.row-drop-below{box-shadow:inset 0 -2px 0 0 var(--info-text)}
 .qcell.row-dragging{opacity:0.35}
@@ -267,6 +273,13 @@ body:has(.welcome.active) .gantt-actions{display:none}
 /* About modal link */
 .about-link{color:var(--info-text);text-decoration:none;font-size:12px;font-weight:500}
 .about-link:hover{text-decoration:underline}
+
+/* Update modal: compact layout */
+.update-modal-content{max-width:360px;padding:18px 22px}
+.update-modal-content .modal-title{text-align:center}
+.update-modal-content .modal-body{margin-bottom:16px;text-align:center;white-space:nowrap}
+.update-modal-content .modal-actions{justify-content:center}
+.update-release-link{display:inline-block;margin-top:8px}
 
 /* Keyboard shortcuts modal */
 .kbd-section{margin-bottom:14px}
