@@ -101,8 +101,6 @@ img.gantt-logo{object-fit:contain}
 .row-label.adj:hover{background:var(--bg-soft)}
 .row-label.selected{background:var(--info-bg)}
 .row-label.selected .lbl-text{color:var(--info-text);font-weight:500}
-.row-label.adj::before{content:'\22EE\22EE';font-size:10px;letter-spacing:-1px;color:var(--text-3);opacity:0;margin-right:2px;margin-left:-4px;transition:opacity .12s;flex-shrink:0}
-.row-label.adj:hover::before{opacity:0.55}
 .row-label.dragging-row{opacity:0.35}
 .row-label.drop-above::after{content:'';position:absolute;top:-1px;left:0;right:-15px;height:2px;background:var(--info-text);z-index:5;pointer-events:none}
 .row-label.drop-below::after{content:'';position:absolute;bottom:-1px;left:0;right:-15px;height:2px;background:var(--info-text);z-index:5;pointer-events:none}
@@ -235,13 +233,13 @@ body:has(.welcome.active) .gantt-actions{display:none}
 }
 .gantt-root[data-theme="dark"] .gh.quarter-band{background:#4A8F7E;color:#F1EFE8}
 
-/* Drag handle on the number column */
-.row-number.drag-handle{cursor:grab;transition:color .12s, background .12s;border-radius:3px;padding:1px 4px;margin-right:-2px}
+/* Drag handle on the number column - always-visible dots indicate draggability */
+.row-number.drag-handle{cursor:grab;transition:color .12s, background .12s;border-radius:3px;padding:1px 4px;margin-right:-2px;display:inline-flex;align-items:center;gap:3px}
+.row-number.drag-handle::before{content:'\22EE\22EE';font-size:9px;letter-spacing:-1px;color:var(--text-3);opacity:0.45;transition:opacity .12s, color .12s}
 .row-number.drag-handle:hover{color:var(--text-1);background:var(--bg-soft)}
+.row-number.drag-handle:hover::before{opacity:0.9;color:var(--text-2)}
 .row-number.drag-handle:active{cursor:grabbing}
-
-/* Ensure span is properly draggable on WebKit */
-.row-number.drag-handle{display:inline-block}
+.row-number.drag-handle:active::before{opacity:1}
 
 /* Override row label cursor - no text I-beam */
 .row-label{cursor:default}

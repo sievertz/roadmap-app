@@ -589,6 +589,9 @@ function renderGrid(){
     const num = document.createElement('span');
     num.className = 'row-number' + (init.adjustable !== false ? ' drag-handle' : '');
     num.textContent = (idx + 1);
+    if(init.adjustable !== false){
+      num.title = 'Drag to reorder';
+    }
     li.appendChild(num);
 
     if(isRenaming){
