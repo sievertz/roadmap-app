@@ -129,6 +129,16 @@ pub fn create_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
                 .id("file:export_svg_visible")
                 .build(app)?,
         )
+        .item(
+            &MenuItemBuilder::new("PNG (full)…")
+                .id("file:export_png")
+                .build(app)?,
+        )
+        .item(
+            &MenuItemBuilder::new("PNG (visible area)…")
+                .id("file:export_png_visible")
+                .build(app)?,
+        )
         .build()?;
 
     let file_menu = file_menu
@@ -229,6 +239,8 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
         "file:export_html" => emit_to_focused(app, "menu:export_html", ()),
         "file:export_svg" => emit_to_focused(app, "menu:export_svg", ()),
         "file:export_svg_visible" => emit_to_focused(app, "menu:export_svg_visible", ()),
+        "file:export_png" => emit_to_focused(app, "menu:export_png", ()),
+        "file:export_png_visible" => emit_to_focused(app, "menu:export_png_visible", ()),
         "file:print" => emit_to_focused(app, "menu:print", ()),
         "view:fit_to_height" => emit_to_focused(app, "menu:fit_to_height", ()),
         "view:theme_auto" => app.emit("menu:theme", "auto").unwrap_or(()),

@@ -1442,6 +1442,64 @@ async function menuExportSvg(opts){
   }
 }
 
+// Render an SVG string to PNG bytes via an offscreen canvas.
+// scale = 2 gives a crisp 2x-DPI raster suitable for Google Slides.
+function svgToPng(svgString, scale){
+  return new Promise((resolve, reject) => {
+    try {
+      // Pull pixel dimensions from the root <svg> width/height attributes.
+      const m = svgString.match(/<svg[^>]*\swidth="(\d+(?:\.\d+)?)"[^>]*\sheight="(\d+(?:\.\d+)?)"/);
+      if(!m){ reject(new Error("Could not read SVG dimensions")); return; }
+      const w = parseFloat(m[1]);
+      const h = parseFloat(m[2]);
+      const s = scale || 2;
+      const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(w * s);
+          canvas.height = Math.round(h * s);
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(url);
+          canvas.toBlob(async (pngBlob) => {
+            if(!pngBlob){ reject(new Error("Canvas produced no PNG blob")); return; }
+            const buf = await pngBlob.arrayBuffer();
+            resolve(Array.from(new Uint8Array(buf)));
+          }, 'image/png');
+        } catch(err){ reject(err); }
+      };
+      img.onerror = (e) => {
+        URL.revokeObjectURL(url);
+        reject(new Error("SVG image failed to load for rasterization"));
+      };
+      img.src = url;
+    } catch(err){ reject(err); }
+  });
+}
+
+async function menuExportPng(opts){
+  try {
+    if(state.initiatives.length === 0){
+      alert("The roadmap is empty - nothing to export.");
+      return;
+    }
+    const visibleOnly = opts && opts.visibleOnly;
+    const suffix = visibleOnly ? '-visible' : '';
+    const defaultName = (basenameOf(currentFilePath) || 'roadmap') + suffix + '.png';
+    const path = await invoke("export_png_dialog", { defaultName });
+    if(!path) return;
+    const svg = generateExportSvg({ visibleOnly });
+    const bytes = await svgToPng(svg, 2);
+    await invoke('write_png_file', { path, bytes });
+  } catch(e){
+    console.error("[Roadmap] PNG export failed:", e);
+    alert("Could not export PNG: " + (e && e.message ? e.message : e));
+  }
+}
+
 // ----- SVG generator (builds vector export from state directly, no DOM rasterization) -----
 
 function svgEscape(s){
@@ -1508,7 +1566,9 @@ function generateExportSvg(opts){
       const clientWidth = wrap.clientWidth;
       const labelW = state.config.labelColumnWidth || 200;
       let startM = Math.max(0, Math.floor(scrollLeft / MONTH_WIDTH_PX));
-      let endM = Math.min(ms.length - 1, Math.floor((scrollLeft + clientWidth - labelW) / MONTH_WIDTH_PX));
+      // ceil-1 gives the last fully-visible month index (excludes the one
+      // that would start exactly at the right edge of the viewport)
+      let endM = Math.min(ms.length - 1, Math.ceil((scrollLeft + clientWidth - labelW) / MONTH_WIDTH_PX) - 1);
       if(endM < startM) endM = startM;
       ms = ms.slice(startM, endM + 1);
       // Regroup years and quarters from the sliced months
@@ -1583,7 +1643,8 @@ function generateExportSvg(opts){
   const FONT = '-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, system-ui, sans-serif';
   const parts = [];
   parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family='${FONT}'>`);
-  parts.push(`<rect x="0" y="0" width="${W}" height="${H}" fill="${C.bgPage}"/>`);
+  // Page background intentionally omitted - export is transparent outside the card
+  // so it can be dropped onto any slide background cleanly.
 
   // ----- Grid -----
   const gridX = PAD;
@@ -1964,6 +2025,8 @@ async function wireMenuEvents(){
   await listen('menu:export_html', menuExportHtml);
   await listen('menu:export_svg', () => menuExportSvg());
   await listen('menu:export_svg_visible', () => menuExportSvg({ visibleOnly: true }));
+  await listen('menu:export_png', () => menuExportPng());
+  await listen('menu:export_png_visible', () => menuExportPng({ visibleOnly: true }));
   await listen('menu:check_updates', () => checkForUpdates({ verbose: true }));
   await listen('menu:fit_to_height', toggleFitToHeight);
   await listen('menu:undo', () => handleUndoShortcut('undo'));

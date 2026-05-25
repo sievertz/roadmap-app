@@ -220,6 +220,31 @@ pub async fn export_svg_dialog(app: AppHandle, default_name: Option<String>) -> 
     }))
 }
 
+// Export-as-PNG dialog
+#[tauri::command]
+pub async fn export_png_dialog(app: AppHandle, default_name: Option<String>) -> Result<Option<String>, String> {
+    let name = default_name.unwrap_or_else(|| "roadmap.png".to_string());
+    let file_path = app
+        .dialog()
+        .file()
+        .add_filter("PNG Image", &["png"])
+        .set_file_name(&name)
+        .blocking_save_file();
+    Ok(file_path.and_then(|fp| match fp {
+        FilePath::Path(p) => Some(p.to_string_lossy().to_string()),
+        _ => None,
+    }))
+}
+
+// Write a PNG file (binary). Bytes passed from JS as Vec<u8>.
+#[tauri::command]
+pub fn write_png_file(path: String, bytes: Vec<u8>) -> Result<(), String> {
+    if let Some(parent) = Path::new(&path).parent() {
+        fs::create_dir_all(parent).ok();
+    }
+    fs::write(&path, bytes).map_err(|e| format!("Failed to write {}: {}", path, e))
+}
+
 // Read a .roadmap file's contents
 #[tauri::command]
 pub fn read_roadmap_file(path: String) -> Result<String, String> {
