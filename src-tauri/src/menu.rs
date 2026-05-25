@@ -109,19 +109,25 @@ pub fn create_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
                 .accelerator("CmdOrCtrl+Shift+S")
                 .build(app)?,
         )
-        .separator()
+        .separator();
+
+    let export_submenu = SubmenuBuilder::new(app, "Export as")
         .item(
-            &MenuItemBuilder::new("Export as HTML…")
+            &MenuItemBuilder::new("HTML…")
                 .id("file:export_html")
                 .accelerator("CmdOrCtrl+Shift+E")
                 .build(app)?,
         )
         .item(
-            &MenuItemBuilder::new("Export as SVG…")
+            &MenuItemBuilder::new("SVG…")
                 .id("file:export_svg")
                 .accelerator("CmdOrCtrl+Shift+P")
                 .build(app)?,
         )
+        .build()?;
+
+    let file_menu = file_menu
+        .item(&export_submenu)
         .separator()
         .item(
             &MenuItemBuilder::new("Print…")

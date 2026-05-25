@@ -1919,14 +1919,15 @@ async function wireMenuEvents(){
     const theme = event.payload; // 'auto' | 'light' | 'dark'
     applyTheme(theme);
   });
-  await listen('menu:print', () => {
+  const triggerPrint = () => {
     // Close any open modals so they don't appear in print preview
     if(state.selected){ state.selected = null; render(); }
     document.querySelectorAll('.edit-modal-backdrop, .legend-modal-backdrop, .modal-backdrop')
       .forEach(el => el.classList.remove('open'));
     // Small delay so DOM updates before print dialog opens
     setTimeout(() => window.print(), 50);
-  });
+  };
+  await listen('menu:print', triggerPrint);
   await listen('menu:about', () => {
     document.getElementById('about-modal').classList.add('open');
   });

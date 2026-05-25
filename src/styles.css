@@ -326,7 +326,7 @@ body:has(.welcome.active) .gantt-actions{display:none}
 
 /* Print styling: hide UI chrome, show full timeline (no horizontal scroll), preserve colors */
 @media print{
-  @page{size:landscape;margin:1cm}
+  @page{size:A4 landscape;margin:1cm}
   html, body{background:#ffffff !important}
   .gantt-root{padding:0;--row-h:32px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .gantt-grid-wrap{overflow:visible !important;border:1px solid #c9c5b8 !important}
