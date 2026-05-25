@@ -754,9 +754,10 @@ function renderGrid(){
   ghostLi.addEventListener('click', addInit);
   ghostLc.appendChild(ghostLi);
   grid.appendChild(ghostLc);
-  qs.forEach(() => {
+  qs.forEach((_, qi) => {
     const c = document.createElement('div');
-    c.className = 'qcell ghost-cell';
+    const yearStartClass = yearStartIndices.has(qi) ? ' year-start' : '';
+    c.className = 'qcell ghost-cell' + yearStartClass;
     c.addEventListener('click', addInit);
     grid.appendChild(c);
   });
@@ -1422,16 +1423,18 @@ async function menuExportHtml(){
   }
 }
 
-async function menuExportSvg(){
+async function menuExportSvg(opts){
   try {
     if(state.initiatives.length === 0){
       alert("The roadmap is empty - nothing to export.");
       return;
     }
-    const defaultName = (basenameOf(currentFilePath) || 'roadmap') + '.svg';
+    const visibleOnly = opts && opts.visibleOnly;
+    const suffix = visibleOnly ? '-visible' : '';
+    const defaultName = (basenameOf(currentFilePath) || 'roadmap') + suffix + '.svg';
     const path = await invoke("export_svg_dialog", { defaultName });
     if(!path) return;
-    const svg = generateExportSvg();
+    const svg = generateExportSvg({ visibleOnly });
     await invoke('write_svg_file', { path, contents: svg });
   } catch(e){
     console.error("[Roadmap] SVG export failed:", e);
@@ -1467,7 +1470,11 @@ function svgTruncate(text, maxW, fontSize, fontWeight){
   return lo > 0 ? text.slice(0, lo) + '…' : '';
 }
 
-function generateExportSvg(){
+function generateExportSvg(opts){
+  // Optional opts.visibleOnly = true to crop the timeline to what is currently
+  // visible in the grid scroll area (useful when the roadmap is very wide and
+  // the user wants to export a focused section)
+  const visibleOnly = opts && opts.visibleOnly;
   // Read live CSS variables so light/dark mode is auto-handled
   const root = document.querySelector('.gantt-root');
   const cs = getComputedStyle(root);
@@ -1488,9 +1495,48 @@ function generateExportSvg(){
   const C_QB_BG = qbEl ? getComputedStyle(qbEl).backgroundColor : '#DCEBE6';
   const C_QB_TEXT = qbEl ? getComputedStyle(qbEl).color : '#133933';
 
-  const ms = months();
-  const ys = years();
-  const qBands = quarterBands();
+  let ms = months();
+  let ys = years();
+  let qBands = quarterBands();
+  let initiatives = state.initiatives;
+
+  // Crop to visible area if requested
+  if(visibleOnly){
+    const wrap = document.querySelector('.gantt-grid-wrap');
+    if(wrap){
+      const scrollLeft = wrap.scrollLeft;
+      const clientWidth = wrap.clientWidth;
+      const labelW = state.config.labelColumnWidth || 200;
+      let startM = Math.max(0, Math.floor(scrollLeft / MONTH_WIDTH_PX));
+      let endM = Math.min(ms.length - 1, Math.floor((scrollLeft + clientWidth - labelW) / MONTH_WIDTH_PX));
+      if(endM < startM) endM = startM;
+      ms = ms.slice(startM, endM + 1);
+      // Regroup years and quarters from the sliced months
+      ys = []; qBands = [];
+      let curY = null, curQ = null;
+      ms.forEach((m, idx) => {
+        const yKey = String(m.year);
+        if(curY && curY.label === yKey){ curY.span++; curY.endIdx = idx; }
+        else { curY = {label: yKey, span: 1, startIdx: idx, endIdx: idx}; ys.push(curY); }
+        const qNum = Math.floor((m.month - 1) / 3) + 1;
+        const qKey = m.year + '-Q' + qNum;
+        if(curQ && curQ.key === qKey){ curQ.span++; }
+        else { curQ = {key: qKey, label: 'Q' + qNum, span: 1, year: m.year}; qBands.push(curQ); }
+      });
+      // Filter and clip initiatives to the visible range
+      initiatives = state.initiatives.map(init => {
+        if(!init.position) return null;
+        if(init.position.e < startM || init.position.s > endM) return null;
+        const clipped = Object.assign({}, init, {
+          position: {
+            s: Math.max(0, init.position.s - startM),
+            e: Math.min(ms.length - 1, init.position.e - startM)
+          }
+        });
+        return clipped;
+      }).filter(Boolean);
+    }
+  }
 
   // Layout constants - mirror the in-app CSS
   const PAD = 20;
@@ -1499,13 +1545,16 @@ function generateExportSvg(){
   const TIME_W = ms.length * MONTH_W;
   const GRID_W = LABEL_W + TIME_W;
 
-  const TITLE_H = 42;
   const YEAR_H = 22;
   const QUARTER_H = 18;
   const MONTH_H = 28;
-  const ROW_H = 38;
+  // Read the actual row height from a live row in the grid so the SVG export
+  // matches whatever the user sees (responsive heights, fit-to-height, etc).
+  const sampleQcell = document.querySelector('.qcell');
+  const ROW_H = sampleQcell ? Math.round(sampleQcell.getBoundingClientRect().height) : 38;
   const HEADER_H = YEAR_H + QUARTER_H + MONTH_H;
-  const ROWS_H = state.initiatives.length * ROW_H;
+  const TITLE_AREA_H = YEAR_H + QUARTER_H; // logo + title span these two rows in sticky col
+  const ROWS_H = initiatives.length * ROW_H;
   const GRID_H = HEADER_H + ROWS_H;
 
   // Legend wrapping
@@ -1527,42 +1576,46 @@ function generateExportSvg(){
   const LEG_H = LEG_PAD_Y * 2 + legRows.length * LEG_ROW_H + Math.max(0, legRows.length - 1) * LEG_ROW_GAP;
 
   const SECTION_GAP = 14;
-  const titleStr = basenameOf(currentFilePath) || 'Roadmap';
+  const titleStr = (state.config.title && state.config.title.trim()) || basenameOf(currentFilePath) || 'Roadmap';
   const W = GRID_W + PAD * 2;
-  const H = PAD + TITLE_H + SECTION_GAP + GRID_H + SECTION_GAP + LEG_H + PAD;
+  const H = PAD + GRID_H + SECTION_GAP + LEG_H + PAD;
 
   const FONT = '-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, system-ui, sans-serif';
   const parts = [];
   parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family='${FONT}'>`);
   parts.push(`<rect x="0" y="0" width="${W}" height="${H}" fill="${C.bgPage}"/>`);
 
-  // ----- Title -----
+  // ----- Grid -----
+  const gridX = PAD;
+  const gridY = PAD;
+  parts.push(`<rect x="${gridX}" y="${gridY}" width="${GRID_W}" height="${GRID_H}" fill="${C.bgCard}" stroke="${C.border1}" rx="8"/>`);
+
+  // Sticky-col header background (covers all 3 header rows)
+  parts.push(`<rect x="${gridX}" y="${gridY}" width="${LABEL_W}" height="${HEADER_H}" fill="${C.bgSoft}"/>`);
+
+  // ----- Title (logo + name) in the sticky-col, spanning year+quarter rows -----
   {
-    const tx = PAD, ty = PAD;
-    const size = 26;
-    const lx = tx, ly = ty + (TITLE_H - size) / 2;
+    const titleY = gridY;
+    const logoSize = 22;
+    const lx = gridX + 12;
+    const ly = titleY + (TITLE_AREA_H - logoSize) / 2;
     const logoVal = state.config.logo || '';
     if(logoVal.startsWith('data:')){
-      parts.push(`<image x="${lx}" y="${ly}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet" href="${svgEscape(logoVal)}"/>`);
+      parts.push(`<image x="${lx}" y="${ly}" width="${logoSize}" height="${logoSize}" preserveAspectRatio="xMidYMid meet" href="${svgEscape(logoVal)}"/>`);
     } else if(logoVal){
-      // Emoji: render as text. Slightly larger font + adjusted baseline for visual centering.
-      parts.push(`<text x="${lx + size / 2}" y="${ly + size / 2}" font-size="22" text-anchor="middle" dominant-baseline="central">${svgEscape(logoVal)}</text>`);
+      parts.push(`<text x="${lx + logoSize / 2}" y="${ly + logoSize / 2}" font-size="18" text-anchor="middle" dominant-baseline="central">${svgEscape(logoVal)}</text>`);
     } else {
-      const sc = size / 24;
+      const sc = logoSize / 24;
       parts.push(`<rect x="${lx + 2 * sc}" y="${ly + 5 * sc}" width="${9 * sc}" height="${3 * sc}" rx="${1 * sc}" fill="#378ADD"/>`);
       parts.push(`<rect x="${lx + 6 * sc}" y="${ly + 10.5 * sc}" width="${12 * sc}" height="${3 * sc}" rx="${1 * sc}" fill="#1D9E75"/>`);
       parts.push(`<rect x="${lx + 10 * sc}" y="${ly + 16 * sc}" width="${10 * sc}" height="${3 * sc}" rx="${1 * sc}" fill="#BA7517"/>`);
     }
-    parts.push(`<text x="${tx + size + 10}" y="${ty + TITLE_H / 2}" font-size="18" font-weight="600" fill="${C.text1}" dominant-baseline="central">${svgEscape(titleStr)}</text>`);
+    // Title text next to logo, truncated to fit label column
+    const titleX = lx + logoSize + 8;
+    const titleMaxW = LABEL_W - (titleX - gridX) - 12;
+    const titleTrunc = svgTruncate(titleStr, titleMaxW, 15, '600');
+    parts.push(`<text x="${titleX}" y="${titleY + TITLE_AREA_H / 2}" font-size="15" font-weight="600" fill="${C.text1}" dominant-baseline="central">${svgEscape(titleTrunc)}</text>`);
   }
-
-  // ----- Grid -----
-  const gridX = PAD;
-  const gridY = PAD + TITLE_H + SECTION_GAP;
-  parts.push(`<rect x="${gridX}" y="${gridY}" width="${GRID_W}" height="${GRID_H}" fill="${C.bgCard}" stroke="${C.border1}" rx="8"/>`);
-
-  // Sticky-col header background
-  parts.push(`<rect x="${gridX}" y="${gridY}" width="${LABEL_W}" height="${HEADER_H}" fill="${C.bgSoft}"/>`);
 
   // Year band
   {
@@ -1609,7 +1662,7 @@ function generateExportSvg(){
 
   // ----- Initiative rows -----
   const rowsY0 = gridY + HEADER_H;
-  state.initiatives.forEach((init, idx) => {
+  initiatives.forEach((init, idx) => {
     const ry = rowsY0 + idx * ROW_H;
 
     // Label cell bg
@@ -1909,7 +1962,8 @@ async function wireMenuEvents(){
   await listen('menu:save', menuSave);
   await listen('menu:save_as', menuSaveAs);
   await listen('menu:export_html', menuExportHtml);
-  await listen('menu:export_svg', menuExportSvg);
+  await listen('menu:export_svg', () => menuExportSvg());
+  await listen('menu:export_svg_visible', () => menuExportSvg({ visibleOnly: true }));
   await listen('menu:check_updates', () => checkForUpdates({ verbose: true }));
   await listen('menu:fit_to_height', toggleFitToHeight);
   await listen('menu:undo', () => handleUndoShortcut('undo'));

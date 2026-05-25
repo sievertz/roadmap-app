@@ -119,9 +119,14 @@ pub fn create_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
                 .build(app)?,
         )
         .item(
-            &MenuItemBuilder::new("SVG…")
+            &MenuItemBuilder::new("SVG (full)…")
                 .id("file:export_svg")
                 .accelerator("CmdOrCtrl+Shift+P")
+                .build(app)?,
+        )
+        .item(
+            &MenuItemBuilder::new("SVG (visible area)…")
+                .id("file:export_svg_visible")
                 .build(app)?,
         )
         .build()?;
@@ -223,6 +228,7 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
         "file:save_as" => emit_to_focused(app, "menu:save_as", ()),
         "file:export_html" => emit_to_focused(app, "menu:export_html", ()),
         "file:export_svg" => emit_to_focused(app, "menu:export_svg", ()),
+        "file:export_svg_visible" => emit_to_focused(app, "menu:export_svg_visible", ()),
         "file:print" => emit_to_focused(app, "menu:print", ()),
         "view:fit_to_height" => emit_to_focused(app, "menu:fit_to_height", ()),
         "view:theme_auto" => app.emit("menu:theme", "auto").unwrap_or(()),
