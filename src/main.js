@@ -466,6 +466,14 @@ function render(){
 
 function renderGrid(){
   const grid = document.getElementById('grid');
+  // Detach the titlebar before wiping grid so getElementById can still
+  // find it when we re-attach it into the new title cell. Without this
+  // step, repeated renders lose the logo+title (the titlebar gets removed
+  // along with the rest of grid.innerHTML).
+  const titlebarRescue = document.getElementById('gantt-titlebar');
+  if(titlebarRescue && titlebarRescue.parentElement && titlebarRescue.parentElement !== document.body){
+    document.body.appendChild(titlebarRescue);
+  }
   grid.innerHTML = '';
 
   const qs = months();
