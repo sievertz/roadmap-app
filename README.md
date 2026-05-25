@@ -124,14 +124,17 @@ npm run tauri build -- --target universal-apple-darwin
 
 GitHub Actions builds and signs releases automatically when you push a git tag. The local build is only a sanity check that the code compiles.
 
+**Step 1 — bump version in all three files.** This is critical: if any file is left at the old version, the binary's metadata will be wrong and auto-update won't trigger:
+- `package.json` → `"version": "X.Y.Z"`
+- `src-tauri/Cargo.toml` → `version = "X.Y.Z"`
+- `src-tauri/tauri.conf.json` → `"version": "X.Y.Z"`
+
+**Step 2 — sanity check that the build compiles, then commit, tag and push:**
+
 ```bash
 cd ~/Projects/roadmap-app
-
-# Bump version in three files: package.json, src-tauri/Cargo.toml, src-tauri/tauri.conf.json
-# Then verify the build compiles:
 npm run tauri build 2>&1 | tail -5
 
-# Commit, tag and push
 git add .
 git commit -m "Release vX.Y.Z: brief description"
 git tag vX.Y.Z
