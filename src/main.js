@@ -217,6 +217,26 @@ function addYearAtEnd(){
   render();
 }
 
+// Add a year before the current start year. All existing initiatives keep
+// their absolute calendar position - their position indices are shifted
+// forward by the number of new months inserted at the front.
+function addYearAtStart(){
+  captureSnapshot();
+  const oldStartMonth = state.config.startMonth;
+  // New months added = months from new Jan to old start, exclusive of old start
+  // e.g. old start = April (month 4) means we add Jan-Mar of old year (3 months)
+  // plus the full previous year (12 months) = 15 months total
+  const numAdded = (oldStartMonth - 1) + 12;
+  state.initiatives.forEach(init => {
+    init.position.s += numAdded;
+    init.position.e += numAdded;
+  });
+  state.config.startYear--;
+  state.config.startMonth = 1;
+  invalidateCache();
+  render();
+}
+
 function removeYear(yearGroup){
   captureSnapshot();
   const ys = years();
@@ -339,10 +359,36 @@ async function loadFromFile(path){
     await updateWindowTitle();
     await registerWindowFile(path);
     render();
+    // Land the scroll position on the previous month so users see current
+    // context with one month of history visible on the left. They can scroll
+    // back further to see older content.
+    scrollToPreviousMonth();
   } catch(e){
     console.error("[Roadmap] load failed:", e);
     alert("Could not open file: " + e);
   }
+}
+
+function scrollToPreviousMonth(){
+  const wrap = document.querySelector('.gantt-grid-wrap');
+  if(!wrap) return;
+  const ms = months();
+  if(ms.length === 0) return;
+  const now = new Date();
+  // Previous calendar month (1-12). getMonth() returns 0-11, which equals
+  // (currentMonth - 1) in 1-12 terms - i.e. exactly the previous month.
+  let y = now.getFullYear();
+  let m = now.getMonth();
+  if(m === 0){ y -= 1; m = 12; }
+  // Find target month or clamp to roadmap range
+  let targetIdx = ms.findIndex(x => x.year === y && x.month === m);
+  if(targetIdx < 0){
+    const targetAbs = y * 12 + m;
+    const firstAbs = ms[0].year * 12 + ms[0].month;
+    if(targetAbs < firstAbs) targetIdx = 0;
+    else targetIdx = ms.length - 1;
+  }
+  wrap.scrollLeft = Math.max(0, targetIdx * MONTH_WIDTH_PX);
 }
 
 // Auto-expand the label column width to fit the longest initiative name on
@@ -503,6 +549,18 @@ function renderGrid(){
     c.className = 'gh year-band';
     c.style.background = YEAR_BAND_COLORS[idx % YEAR_BAND_COLORS.length];
     c.style.gridColumn = 'span ' + y.span;
+    // On the first year, prepend a "+" button to add a year before
+    if(idx === 0){
+      const addPrev = document.createElement('button');
+      addPrev.className = 'year-add';
+      addPrev.textContent = '+';
+      addPrev.title = 'Add year ' + (state.config.startYear - 1);
+      addPrev.addEventListener('click', e => {
+        e.stopPropagation();
+        addYearAtStart();
+      });
+      c.appendChild(addPrev);
+    }
     const labelSpan = document.createElement('span');
     labelSpan.textContent = y.label;
     c.appendChild(labelSpan);
