@@ -460,6 +460,7 @@ function render(){
   renderEditPanel();
   renderLegend();
   renderWelcome();
+  applyFitToHeight();
   scheduleAutosave();
 }
 
@@ -1618,9 +1619,9 @@ function generateExportSvg(){
     const rowNumXEnd = gridX + 12 + 22;
     parts.push(`<text x="${rowNumXEnd}" y="${ry + ROW_H / 2}" font-size="11" fill="${C.text3}" text-anchor="end" dominant-baseline="central">${idx + 1}</text>`);
 
-    // Tag (legend label as small chip on right side)
+    // Tag (dev weeks as small chip on right side, matching the UI)
     const lg = legendFor(init.type);
-    const tagText = lg ? lg.label : '';
+    const tagText = init.weeks ? init.weeks + 'v' : '';
     const tagFont = 10, tagPadX = 6;
     const tagW = tagText ? svgMeasureText(tagText, tagFont, '500') + tagPadX * 2 : 0;
 
@@ -1910,6 +1911,7 @@ async function wireMenuEvents(){
   await listen('menu:export_html', menuExportHtml);
   await listen('menu:export_svg', menuExportSvg);
   await listen('menu:check_updates', () => checkForUpdates({ verbose: true }));
+  await listen('menu:fit_to_height', toggleFitToHeight);
   await listen('menu:undo', () => handleUndoShortcut('undo'));
   await listen('menu:redo', () => handleUndoShortcut('redo'));
   await listen('menu:shortcuts', () => {
@@ -2099,6 +2101,50 @@ function startRoadmapTitleRename(){
   });
   input.addEventListener('blur', commit);
 }
+
+// ----- Fit rows to window height -----
+
+const FIT_HEIGHT_KEY = 'roadmap.fitToHeight';
+let fitToHeight = false;
+try { fitToHeight = localStorage.getItem(FIT_HEIGHT_KEY) === 'true'; } catch(e){}
+
+function applyFitToHeight(){
+  const root = document.querySelector('.gantt-root');
+  if(!root) return;
+  // Toggle the body class so CSS knows we're in fit mode (compact legend etc)
+  document.body.classList.toggle('fit-mode', !!fitToHeight);
+  if(!fitToHeight){
+    // Let CSS media queries decide the row height
+    root.style.removeProperty('--row-h');
+    return;
+  }
+  const numRows = state.initiatives.length;
+  if(numRows === 0){
+    root.style.removeProperty('--row-h');
+    return;
+  }
+  // Measure the legend dynamically AFTER toggling the class so we get the
+  // compact height that fit-mode CSS produces
+  const legendEl = document.getElementById('legend');
+  const legendH = legendEl ? legendEl.offsetHeight : 40;
+  // Fixed non-row space: title cell + year band + quarter band + month header + padding + borders
+  const FIXED_HEADER = 150;
+  // Buffer (small margin + breathing room)
+  const BUFFER = 30;
+  const available = window.innerHeight - FIXED_HEADER - legendH - BUFFER;
+  const optimal = Math.max(28, Math.min(80, Math.floor(available / numRows)));
+  root.style.setProperty('--row-h', optimal + 'px');
+}
+
+function toggleFitToHeight(){
+  fitToHeight = !fitToHeight;
+  try { localStorage.setItem(FIT_HEIGHT_KEY, fitToHeight ? 'true' : 'false'); } catch(e){}
+  applyFitToHeight();
+}
+
+window.addEventListener('resize', () => {
+  if(fitToHeight) applyFitToHeight();
+});
 
 // ----- Auto-updater -----
 
