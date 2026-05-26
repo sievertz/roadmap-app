@@ -553,6 +553,31 @@ function renderStrategy(){
   renderStrategyCards('pillars', 'strategy-pillars', { label: 'Pillar', noun: 'pillar', placeholder: 'What this pillar means in practice', max: 5, idPrefix: 'p' });
   renderStrategyCards('opportunities', 'strategy-opportunities', { label: 'Opportunity', noun: 'opportunity', placeholder: 'Why this is worth pursuing', max: 8, idPrefix: 'o' });
   renderStrategyCards('goals', 'strategy-goals', { label: 'Goal', noun: 'goal', placeholder: 'Context, scope or measurement notes', max: 8, idPrefix: 'g', withTarget: true, targetPlaceholder: 'Target (e.g. 20% growth, 1M bookings)' });
+  // Sync card heights row by row across the two columns so opposite cards align
+  requestAnimationFrame(alignStrategyCardRows);
+}
+
+// Match the heights of opposing cards in opportunities/goals columns so each
+// "row" across both columns shares the height of its taller card. Without this
+// each card sizes individually and the grid looks uneven.
+function alignStrategyCardRows(){
+  const opps = document.querySelectorAll('#strategy-opportunities .strategy-pillar');
+  const goals = document.querySelectorAll('#strategy-goals .strategy-pillar');
+  const rows = Math.max(opps.length, goals.length);
+  // Reset any previous min-height so we measure natural content height again
+  opps.forEach(c => c.style.minHeight = '');
+  goals.forEach(c => c.style.minHeight = '');
+  // Read natural heights, then apply max as min-height to both columns
+  const heights = [];
+  for(let i = 0; i < rows; i++){
+    const oppH = opps[i] ? opps[i].offsetHeight : 0;
+    const goalH = goals[i] ? goals[i].offsetHeight : 0;
+    heights.push(Math.max(oppH, goalH));
+  }
+  for(let i = 0; i < rows; i++){
+    if(opps[i]) opps[i].style.minHeight = heights[i] + 'px';
+    if(goals[i]) goals[i].style.minHeight = heights[i] + 'px';
+  }
 }
 
 function renderStrategyCards(stateKey, containerId, opts){
@@ -618,6 +643,8 @@ function renderStrategyCards(stateKey, containerId, opts){
     descInput.addEventListener('input', e => {
       c.description = e.target.value;
       autoGrowTextarea(e.target);
+      // Re-align row heights when typing in opp/goal cards expands the textarea
+      if(stateKey === 'opportunities' || stateKey === 'goals') alignStrategyCardRows();
       scheduleAutosave();
     });
     card.appendChild(descInput);
@@ -634,6 +661,7 @@ function renderStrategyCards(stateKey, containerId, opts){
         state.strategy[stateKey] = items.filter(x => x.id !== c.id);
         scheduleAutosave();
         renderStrategyCards(stateKey, containerId, opts);
+        if(stateKey === 'opportunities' || stateKey === 'goals') requestAnimationFrame(alignStrategyCardRows);
       });
       card.appendChild(rm);
     }
@@ -2270,18 +2298,18 @@ function generateStrategySvg(){
     const descFont = 12, descLH = 18;
     const contentW = cardWidth - 2*CARD_PAD;
     const cardData = items.map((c, idx) => {
+      const hasDesc = !!c.description;
       const titleDisplay = c.title || (placeholderTitle + ' ' + (idx + 1));
-      const descDisplay = c.description || placeholderDesc;
       const titleLines = svgWrapText(titleDisplay, contentW, titleFont, '600');
-      const descLines = svgWrapText(descDisplay, contentW, descFont, '400');
+      const descLines = hasDesc ? svgWrapText(c.description, contentW, descFont, '400') : [];
       return {
         titleLines: titleLines.length ? titleLines : [''],
-        descLines: descLines.length ? descLines : [''],
-        titleEmpty: !c.title,
-        descEmpty: !c.description
+        descLines,
+        hasDesc,
+        titleEmpty: !c.title
       };
     });
-    const maxH = Math.max(...cardData.map(d => CARD_PAD + d.titleLines.length*titleLH + 6 + d.descLines.length*descLH + CARD_PAD));
+    const maxH = Math.max(...cardData.map(d => CARD_PAD + d.titleLines.length*titleLH + (d.hasDesc ? 6 + d.descLines.length*descLH : 0) + CARD_PAD));
     cardData.forEach((d, i) => {
       const cardX = PAD + i * (cardWidth + CARD_GAP);
       parts.push(`<rect x="${cardX}" y="${y}" width="${cardWidth}" height="${maxH}" rx="${CARD_RADIUS}" fill="${C.bgCard}" stroke="${C.border1}"/>`);
@@ -2291,68 +2319,95 @@ function generateStrategySvg(){
         const style = d.titleEmpty ? ' font-style="italic"' : '';
         parts.push(`<text x="${cardX + CARD_PAD}" y="${ty + idx*titleLH}" font-size="${titleFont}" font-weight="600" fill="${fill}"${style}>${svgEscape(line)}</text>`);
       });
-      ty += d.titleLines.length*titleLH + 6 + descFont - 4;
-      d.descLines.forEach((line, idx) => {
-        const fill = d.descEmpty ? C.text3 : C.text2;
-        const style = d.descEmpty ? ' font-style="italic"' : '';
-        parts.push(`<text x="${cardX + CARD_PAD}" y="${ty + idx*descLH}" font-size="${descFont}" fill="${fill}"${style}>${svgEscape(line)}</text>`);
-      });
+      if(d.hasDesc){
+        ty += d.titleLines.length*titleLH + 6 + descFont - 4;
+        d.descLines.forEach((line, idx) => {
+          parts.push(`<text x="${cardX + CARD_PAD}" y="${ty + idx*descLH}" font-size="${descFont}" fill="${C.text2}">${svgEscape(line)}</text>`);
+        });
+      }
     });
     y += maxH + SECTION_GAP;
   }
 
   // Helper: render a single card stack (used for opportunities/goals columns).
   // Returns the bottom Y position so callers can align columns.
-  function renderCardStack(items, cardX, cardWidth, withTarget, placeholderTitle, placeholderDesc, placeholderTarget, startY){
+  // Compute the natural height a single card needs based on its content
+  function computeCardHeight(c, cardWidth, withTarget){
     const titleFont = 14, titleLH = 20;
     const targetFont = 13, targetLH = 19;
     const descFont = 12, descLH = 18;
     const contentW = cardWidth - 2*CARD_PAD;
-    let cy = startY;
-    items.forEach((c, idx) => {
-      const titleDisplay = c.title || (placeholderTitle + ' ' + (idx + 1));
-      const targetDisplay = withTarget ? (c.target || placeholderTarget) : '';
-      const descDisplay = c.description || placeholderDesc;
-      const titleLines = svgWrapText(titleDisplay, contentW, titleFont, '600');
-      const targetLines = withTarget ? svgWrapText(targetDisplay, contentW, targetFont, '600') : [];
-      const descLines = svgWrapText(descDisplay, contentW, descFont, '400');
-      const renderTitle = titleLines.length ? titleLines : [''];
-      const renderTarget = withTarget ? (targetLines.length ? targetLines : ['']) : [];
-      const renderDesc = descLines.length ? descLines : [''];
-      const cardH = CARD_PAD
-        + renderTitle.length * titleLH
-        + (withTarget ? 4 + renderTarget.length * targetLH : 0)
-        + 4 + renderDesc.length * descLH
-        + CARD_PAD;
-      parts.push(`<rect x="${cardX}" y="${cy}" width="${cardWidth}" height="${cardH}" rx="${CARD_RADIUS}" fill="${C.bgCard}" stroke="${C.border1}"/>`);
-      let ty = cy + CARD_PAD + titleFont - 2;
-      const titleEmpty = !c.title;
-      renderTitle.forEach((line, i) => {
-        const fill = titleEmpty ? C.text3 : C.text1;
-        const style = titleEmpty ? ' font-style="italic"' : '';
-        parts.push(`<text x="${cardX + CARD_PAD}" y="${ty + i*titleLH}" font-size="${titleFont}" font-weight="600" fill="${fill}"${style}>${svgEscape(line)}</text>`);
-      });
-      ty += renderTitle.length * titleLH;
-      if(withTarget){
-        ty += 4 + targetFont - 4;
-        const targetEmpty = !c.target;
-        renderTarget.forEach((line, i) => {
-          const fill = targetEmpty ? C.text3 : C.infoText;
-          const style = targetEmpty ? ' font-style="italic"' : '';
-          parts.push(`<text x="${cardX + CARD_PAD}" y="${ty + i*targetLH}" font-size="${targetFont}" font-weight="600" fill="${fill}"${style}>${svgEscape(line)}</text>`);
-        });
-        ty += renderTarget.length * targetLH;
-      }
-      ty += 4 + descFont - 4;
-      const descEmpty = !c.description;
-      renderDesc.forEach((line, i) => {
-        const fill = descEmpty ? C.text3 : C.text2;
-        const style = descEmpty ? ' font-style="italic"' : '';
-        parts.push(`<text x="${cardX + CARD_PAD}" y="${ty + i*descLH}" font-size="${descFont}" fill="${fill}"${style}>${svgEscape(line)}</text>`);
-      });
-      cy += cardH;
-      if(idx < items.length - 1) cy += 10;
+    const hasTarget = withTarget && !!c.target;
+    const hasDesc = !!c.description;
+    const titleDisplay = c.title || 'Placeholder';
+    const titleLines = svgWrapText(titleDisplay, contentW, titleFont, '600');
+    const renderTitleCount = titleLines.length || 1;
+    let h = CARD_PAD + renderTitleCount * titleLH;
+    if(hasTarget){
+      const targetLines = svgWrapText(c.target, contentW, targetFont, '600');
+      h += 4 + targetLines.length * targetLH;
+    }
+    if(hasDesc){
+      const descLines = svgWrapText(c.description, contentW, descFont, '400');
+      h += 4 + descLines.length * descLH;
+    }
+    h += CARD_PAD;
+    return h;
+  }
+
+  // Render a card at an explicit Y and explicit row height (so siblings can align)
+  function renderCardAt(c, cardX, cardY, cardWidth, rowH, withTarget, placeholderTitle, idx){
+    const titleFont = 14, titleLH = 20;
+    const targetFont = 13, targetLH = 19;
+    const descFont = 12, descLH = 18;
+    const contentW = cardWidth - 2*CARD_PAD;
+    const hasTarget = withTarget && !!c.target;
+    const hasDesc = !!c.description;
+    const titleDisplay = c.title || (placeholderTitle + ' ' + (idx + 1));
+    const titleLines = svgWrapText(titleDisplay, contentW, titleFont, '600');
+    const targetLines = hasTarget ? svgWrapText(c.target, contentW, targetFont, '600') : [];
+    const descLines = hasDesc ? svgWrapText(c.description, contentW, descFont, '400') : [];
+    const renderTitle = titleLines.length ? titleLines : [''];
+    parts.push(`<rect x="${cardX}" y="${cardY}" width="${cardWidth}" height="${rowH}" rx="${CARD_RADIUS}" fill="${C.bgCard}" stroke="${C.border1}"/>`);
+    let ty = cardY + CARD_PAD + titleFont - 2;
+    const titleEmpty = !c.title;
+    renderTitle.forEach((line, i) => {
+      const fill = titleEmpty ? C.text3 : C.text1;
+      const style = titleEmpty ? ' font-style="italic"' : '';
+      parts.push(`<text x="${cardX + CARD_PAD}" y="${ty + i*titleLH}" font-size="${titleFont}" font-weight="600" fill="${fill}"${style}>${svgEscape(line)}</text>`);
     });
+    ty += renderTitle.length * titleLH;
+    if(hasTarget){
+      ty += 4 + targetFont - 4;
+      targetLines.forEach((line, i) => {
+        parts.push(`<text x="${cardX + CARD_PAD}" y="${ty + i*targetLH}" font-size="${targetFont}" font-weight="600" fill="${C.infoText}">${svgEscape(line)}</text>`);
+      });
+      ty += targetLines.length * targetLH;
+    }
+    if(hasDesc){
+      ty += 4 + descFont - 4;
+      descLines.forEach((line, i) => {
+        parts.push(`<text x="${cardX + CARD_PAD}" y="${ty + i*descLH}" font-size="${descFont}" fill="${C.text2}">${svgEscape(line)}</text>`);
+      });
+    }
+  }
+
+  // Render two columns of cards row-by-row so opposite rows share the same
+  // height (the taller of the two cards in that row), giving a clean grid.
+  function renderTwoColumnCards(leftItems, rightItems, leftX, rightX, colW, leftWithTarget, rightWithTarget, leftPlaceholderTitle, rightPlaceholderTitle, startY){
+    const rows = Math.max(leftItems.length, rightItems.length);
+    let cy = startY;
+    for(let i = 0; i < rows; i++){
+      const lc = leftItems[i];
+      const rc = rightItems[i];
+      const lh = lc ? computeCardHeight(lc, colW, leftWithTarget) : 0;
+      const rh = rc ? computeCardHeight(rc, colW, rightWithTarget) : 0;
+      const rowH = Math.max(lh, rh);
+      if(lc) renderCardAt(lc, leftX, cy, colW, rowH, leftWithTarget, leftPlaceholderTitle, i);
+      if(rc) renderCardAt(rc, rightX, cy, colW, rowH, rightWithTarget, rightPlaceholderTitle, i);
+      cy += rowH;
+      if(i < rows - 1) cy += 10;
+    }
     return cy;
   }
 
@@ -2379,10 +2434,7 @@ function generateStrategySvg(){
   parts.push(`<text x="${leftX}" y="${y + LABEL_FONT}" font-size="${LABEL_FONT}" font-weight="600" fill="${C.text3}" letter-spacing="0.88">${svgEscape('OPPORTUNITIES')}</text>`);
   parts.push(`<text x="${rightX}" y="${y + LABEL_FONT}" font-size="${LABEL_FONT}" font-weight="600" fill="${C.text3}" letter-spacing="0.88">${svgEscape('GOALS')}</text>`);
   y += LABEL_FONT + LABEL_GAP;
-  const colStartY = y;
-  const leftBottomY = renderCardStack(state.strategy.opportunities, leftX, colW, false, 'Opportunity', 'Why this is worth pursuing', null, colStartY);
-  const rightBottomY = renderCardStack(state.strategy.goals, rightX, colW, true, 'Goal', 'Context, scope or measurement notes', 'Target (e.g. 20% growth)', colStartY);
-  y = Math.max(leftBottomY, rightBottomY) + SECTION_GAP;
+  y = renderTwoColumnCards(state.strategy.opportunities, state.strategy.goals, leftX, rightX, colW, false, true, 'Opportunity', 'Goal', y) + SECTION_GAP;
 
   // Foundation
   renderTextCard('Foundation', state.strategy.foundation, false, 'Values, enablers and operating principles that everything rests on');

@@ -34,6 +34,12 @@ Why this happens: macOS marks downloaded files as quarantined and requires eithe
 - Roadmap title editable separately from filename (click the heading at the top)
 - Custom logo per roadmap: click the logo to pick an emoji or upload an image (PNG/JPG/SVG/GIF/WebP, max 500 KB)
 - Editable legend with colour picker, custom categories
+- Mark an initiative as done by hovering its row and clicking the ✓ button, or via the checkbox in the edit modal. Done initiatives are faded and struck through, both in the app and in exports
+
+### View options
+- Fit Rows to Window Height: distributes row height across the visible window so the whole roadmap fits on screen without scrolling. Toggle from View → Fit Rows to Window Height
+- Hide Completed Initiatives: hides initiatives marked as done so you can focus on what is still active. Toggle from the "Hide done (N)" chip in the label column header or from View → Hide Completed Initiatives. The setting is remembered between sessions
+- View menu shows check marks next to active toggles
 
 ### Edit modal
 - Category (with colour swatch showing the selected category's colour), dev weeks estimate, JIRA link (with open-in-browser button), dependencies, description
@@ -281,7 +287,8 @@ roadmap-app/
       "dependencies": "team Andromeda",
       "description": "...",
       "adjustable": true,
-      "dashed": false
+      "dashed": false,
+      "done": false
     }
   ],
   "legend": [
