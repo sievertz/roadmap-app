@@ -417,6 +417,18 @@ function scheduleAutosave(){
   }, AUTOSAVE_DEBOUNCE_MS);
 }
 
+// Flush any pending autosave to disk synchronously. Called before the window
+// closes so the last few edits aren't lost if they were still inside the
+// debounce window when the user hit close.
+async function flushAutosave(){
+  if(!currentFilePath) return;
+  if(saveTimer){
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+  await persistToFile(currentFilePath);
+}
+
 async function loadFromFile(path){
   try {
     const contents = await invoke("read_roadmap_file", { path });
@@ -3192,11 +3204,23 @@ async function init(){
     if(verEl) verEl.textContent = 'Version ' + v;
   } catch(e){}
 
-  // NOTE: We previously registered onCloseRequested to unregister the window
-  // from the file-window map, but Tauri 2 has a quirk where having any
-  // listener on close-requested blocks the default close behavior. Instead
-  // we clean up stale entries lazily in Rust when open_file_in_window finds
-  // a label that no longer corresponds to a real window.
+  // Register close-requested handler to flush pending autosave to disk before
+  // the window closes. Tauri 2 quirk: adding a listener blocks the default
+  // close, so we manually call destroy() after the save completes.
+  try {
+    const win = getCurrentWindow();
+    await win.onCloseRequested(async (event) => {
+      event.preventDefault();
+      try {
+        await flushAutosave();
+      } catch(err){
+        console.error('[Roadmap] flush on close failed:', err);
+      }
+      await win.destroy();
+    });
+  } catch(e){
+    console.warn('[Roadmap] could not register close handler:', e);
+  }
 
   // Schedule the auto update-check NOW (before any early returns below).
   // Only from the main window so multiple open windows don't all check.

@@ -64,7 +64,7 @@ Why this happens: macOS marks downloaded files as quarantined and requires eithe
 ### Files and windows
 - Multi-window: each .roadmap file opens in its own window
 - File association: double-clicking a .roadmap file in Finder opens the app
-- Auto-save with debounce to disk
+- Auto-save with debounce to disk, plus a force-flush when closing the window so the last edits never get lost
 - Opening an already-open file focuses the existing window
 - Welcome view with recent files, auto-opens the most recent file on startup
 - Label column auto-fits to the longest initiative name on file open
