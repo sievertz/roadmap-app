@@ -83,7 +83,7 @@ html[data-theme="dark"], html[data-theme="dark"] body { background: #1a1a1a; }
 .strategy-house{padding:20px 24px 32px 24px;max-width:1200px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:14px}
 .strategy-section{background:var(--bg-card);border:1px solid var(--border-1);border-radius:8px;padding:14px 18px;display:flex;flex-direction:column;gap:6px}
 .strategy-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3)}
-.strategy-input{width:100%;border:none;background:transparent;color:var(--text-1);font-family:inherit;font-size:14px;line-height:1.5;resize:vertical;outline:none;padding:0;min-height:48px;box-sizing:border-box}
+.strategy-input{width:100%;border:none;background:transparent;color:var(--text-1);font-family:inherit;font-size:14px;line-height:1.5;resize:none;outline:none;padding:0;min-height:24px;box-sizing:border-box;overflow:hidden}
 .strategy-input::placeholder{color:var(--text-3);font-style:italic}
 .strategy-input-headline{font-size:18px;font-weight:600;line-height:1.35;min-height:34px}
 .strategy-block{display:flex;flex-direction:column;gap:8px}
@@ -101,7 +101,7 @@ html[data-theme="dark"], html[data-theme="dark"] body { background: #1a1a1a; }
 .strategy-pillar-title::placeholder{color:var(--text-3);font-style:italic;font-weight:500}
 .strategy-goal-target{width:100%;border:none;background:transparent;color:var(--info-text);font-family:inherit;font-size:13px;font-weight:600;outline:none;padding:0;font-variant-numeric:tabular-nums}
 .strategy-goal-target::placeholder{color:var(--text-3);font-style:italic;font-weight:500}
-.strategy-pillar-desc{width:100%;border:none;background:transparent;color:var(--text-2);font-family:inherit;font-size:12px;line-height:1.45;resize:vertical;outline:none;padding:0;min-height:48px;flex:1}
+.strategy-pillar-desc{width:100%;border:none;background:transparent;color:var(--text-2);font-family:inherit;font-size:12px;line-height:1.45;resize:none;outline:none;padding:0;min-height:18px;overflow:hidden}
 .strategy-pillar-desc::placeholder{color:var(--text-3);font-style:italic}
 .strategy-pillar-remove{position:absolute;top:6px;right:6px;background:transparent;border:none;color:var(--text-3);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:14px;line-height:1;padding:0;opacity:0;transition:opacity .12s, background .12s, color .12s}
 .strategy-pillar:hover .strategy-pillar-remove{opacity:1}

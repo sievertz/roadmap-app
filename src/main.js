@@ -527,6 +527,14 @@ function switchTab(tab){
   if(tab === 'strategy') renderStrategy();
 }
 
+// Auto-grow a textarea: set its height to fit content + 1 extra row of breathing
+// room. Called on input and on render so the box always matches what's typed.
+function autoGrowTextarea(el){
+  if(!el) return;
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
 function renderStrategy(){
   const visionEl = document.getElementById('strategy-vision');
   const missionEl = document.getElementById('strategy-mission');
@@ -534,6 +542,9 @@ function renderStrategy(){
   if(visionEl && document.activeElement !== visionEl) visionEl.value = state.strategy.vision || '';
   if(missionEl && document.activeElement !== missionEl) missionEl.value = state.strategy.mission || '';
   if(foundationEl && document.activeElement !== foundationEl) foundationEl.value = state.strategy.foundation || '';
+  autoGrowTextarea(visionEl);
+  autoGrowTextarea(missionEl);
+  autoGrowTextarea(foundationEl);
   renderStrategyCards('pillars', 'strategy-pillars', { label: 'Pillar', noun: 'pillar', placeholder: 'What this pillar means in practice', max: 5, idPrefix: 'p' });
   renderStrategyCards('opportunities', 'strategy-opportunities', { label: 'Opportunity', noun: 'opportunity', placeholder: 'Why this is worth pursuing', max: 8, idPrefix: 'o' });
   renderStrategyCards('goals', 'strategy-goals', { label: 'Goal', noun: 'goal', placeholder: 'Context, scope or measurement notes', max: 8, idPrefix: 'g', withTarget: true, targetPlaceholder: 'Target (e.g. 20% growth, 1M bookings)' });
@@ -601,9 +612,12 @@ function renderStrategyCards(stateKey, containerId, opts){
     descInput.dataset.field = 'description';
     descInput.addEventListener('input', e => {
       c.description = e.target.value;
+      autoGrowTextarea(e.target);
       scheduleAutosave();
     });
     card.appendChild(descInput);
+    // Set initial height to match content right after the textarea is in the DOM
+    requestAnimationFrame(() => autoGrowTextarea(descInput));
     // Remove button - only if more than 1 card remains
     if(items.length > 1){
       const rm = document.createElement('button');
@@ -652,18 +666,21 @@ function wireStrategyInputs(){
   if(visionEl){
     visionEl.addEventListener('input', e => {
       state.strategy.vision = e.target.value;
+      autoGrowTextarea(e.target);
       scheduleAutosave();
     });
   }
   if(missionEl){
     missionEl.addEventListener('input', e => {
       state.strategy.mission = e.target.value;
+      autoGrowTextarea(e.target);
       scheduleAutosave();
     });
   }
   if(foundationEl){
     foundationEl.addEventListener('input', e => {
       state.strategy.foundation = e.target.value;
+      autoGrowTextarea(e.target);
       scheduleAutosave();
     });
   }
