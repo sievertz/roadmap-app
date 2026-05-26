@@ -63,7 +63,11 @@ const DEFAULT_STRATEGY = {
     { id: 'g2', title: '', target: '', description: '' },
     { id: 'g3', title: '', target: '', description: '' }
   ],
-  foundation: ''
+  foundation: [
+    { id: 'f1', title: '', description: '' },
+    { id: 'f2', title: '', description: '' },
+    { id: 'f3', title: '', description: '' }
+  ]
 };
 
 const state = {
@@ -362,6 +366,24 @@ function applyLoadedData(data){
           return card;
         })
       : JSON.parse(JSON.stringify(fallback));
+    // Foundation used to be a single text field. We migrate old string content
+    // into structured items by splitting on newlines and the first ":" of each
+    // line, so "- Title: description" becomes { title, description }.
+    let foundationItems;
+    if(Array.isArray(data.strategy.foundation)){
+      foundationItems = normCards(data.strategy.foundation, DEFAULT_STRATEGY.foundation, 'f');
+    } else if(typeof data.strategy.foundation === 'string' && data.strategy.foundation.trim()){
+      const parsed = data.strategy.foundation.split(/\r?\n/).filter(l => l.trim()).map((line, i) => {
+        const cleaned = line.replace(/^\s*[-*•]\s*/, '').replace(/^\s*\d+[.)\-]\s*/, '').trim();
+        const colonIdx = cleaned.indexOf(':');
+        return colonIdx > 0
+          ? { id: 'f' + (i + 1), title: cleaned.slice(0, colonIdx).trim(), description: cleaned.slice(colonIdx + 1).trim() }
+          : { id: 'f' + (i + 1), title: cleaned, description: '' };
+      });
+      foundationItems = parsed.length > 0 ? parsed : JSON.parse(JSON.stringify(DEFAULT_STRATEGY.foundation));
+    } else {
+      foundationItems = JSON.parse(JSON.stringify(DEFAULT_STRATEGY.foundation));
+    }
     state.strategy = {
       vision: typeof data.strategy.vision === 'string' ? data.strategy.vision : '',
       mission: typeof data.strategy.mission === 'string' ? data.strategy.mission : '',
@@ -369,7 +391,7 @@ function applyLoadedData(data){
       opportunities: normCards(data.strategy.opportunities, DEFAULT_STRATEGY.opportunities, 'o'),
       // Migrate old `principles` field to new `goals` if present (pre-release rename)
       goals: normCards(data.strategy.goals || data.strategy.principles, DEFAULT_STRATEGY.goals, 'g', true),
-      foundation: typeof data.strategy.foundation === 'string' ? data.strategy.foundation : ''
+      foundation: foundationItems
     };
   } else {
     state.strategy = JSON.parse(JSON.stringify(DEFAULT_STRATEGY));
@@ -540,19 +562,64 @@ function autoGrowTextarea(el){
   el.style.height = el.scrollHeight + 'px';
 }
 
+// Size an <input> to fit its current content (or placeholder if empty).
+function fitInputToContent(input){
+  if(!input) return;
+  if(!fitInputToContent._span){
+    const s = document.createElement('span');
+    s.style.cssText = 'visibility:hidden;position:absolute;white-space:pre;top:-9999px;left:-9999px';
+    document.body.appendChild(s);
+    fitInputToContent._span = s;
+  }
+  const span = fitInputToContent._span;
+  const cs = getComputedStyle(input);
+  span.style.font = cs.font;
+  span.style.fontWeight = cs.fontWeight;
+  span.style.fontSize = cs.fontSize;
+  span.style.fontFamily = cs.fontFamily;
+  span.style.letterSpacing = cs.letterSpacing;
+  span.textContent = input.value || input.placeholder || '';
+  input.style.width = (span.offsetWidth + 2) + 'px';
+}
+
+// Align all foundation titles to the width of the longest one so each
+// description starts at the same x-position. Avoids the ragged look where
+// the "rest" text begins at different columns depending on title length.
+function alignFoundationTitles(){
+  const titles = document.querySelectorAll('#strategy-foundation .strategy-pillar-title');
+  if(titles.length === 0) return;
+  // Lazy-init the measuring span via fitInputToContent
+  if(!fitInputToContent._span) fitInputToContent(titles[0]);
+  const span = fitInputToContent._span;
+  if(!span) return;
+  let maxW = 0;
+  titles.forEach(input => {
+    const cs = getComputedStyle(input);
+    span.style.font = cs.font;
+    span.style.fontWeight = cs.fontWeight;
+    span.style.fontSize = cs.fontSize;
+    span.style.fontFamily = cs.fontFamily;
+    span.style.letterSpacing = cs.letterSpacing;
+    span.textContent = input.value || input.placeholder || '';
+    const w = span.offsetWidth;
+    if(w > maxW) maxW = w;
+  });
+  titles.forEach(input => {
+    input.style.width = (maxW + 2) + 'px';
+  });
+}
+
 function renderStrategy(){
   const visionEl = document.getElementById('strategy-vision');
   const missionEl = document.getElementById('strategy-mission');
-  const foundationEl = document.getElementById('strategy-foundation');
   if(visionEl && document.activeElement !== visionEl) visionEl.value = state.strategy.vision || '';
   if(missionEl && document.activeElement !== missionEl) missionEl.value = state.strategy.mission || '';
-  if(foundationEl && document.activeElement !== foundationEl) foundationEl.value = state.strategy.foundation || '';
   autoGrowTextarea(visionEl);
   autoGrowTextarea(missionEl);
-  autoGrowTextarea(foundationEl);
   renderStrategyCards('pillars', 'strategy-pillars', { label: 'Pillar', noun: 'pillar', placeholder: 'What this pillar means in practice', max: 5, idPrefix: 'p' });
   renderStrategyCards('opportunities', 'strategy-opportunities', { label: 'Opportunity', noun: 'opportunity', placeholder: 'Why this is worth pursuing', max: 8, idPrefix: 'o' });
   renderStrategyCards('goals', 'strategy-goals', { label: 'Goal', noun: 'goal', placeholder: 'Context, scope or measurement notes', max: 8, idPrefix: 'g', withTarget: true, targetPlaceholder: 'Target (e.g. 20% growth, 1M bookings)' });
+  renderStrategyCards('foundation', 'strategy-foundation', { label: 'Principle', noun: 'principle', placeholder: 'What this principle means in practice', max: 10, idPrefix: 'f' });
   // Sync card heights row by row across the two columns so opposite cards align
   requestAnimationFrame(alignStrategyCardRows);
 }
@@ -613,9 +680,14 @@ function renderStrategyCards(stateKey, containerId, opts){
     titleInput.dataset.field = 'title';
     titleInput.addEventListener('input', e => {
       c.title = e.target.value;
+      if(stateKey === 'foundation') fitInputToContent(e.target);
       scheduleAutosave();
     });
     card.appendChild(titleInput);
+    // Foundation titles auto-size to content for clean inline layout
+    if(stateKey === 'foundation'){
+      requestAnimationFrame(() => fitInputToContent(titleInput));
+    }
     // Optional target field (used by Goals to capture the measurable target value)
     let targetInput = null;
     if(opts.withTarget){
@@ -635,6 +707,10 @@ function renderStrategyCards(stateKey, containerId, opts){
     }
     const descInput = document.createElement('textarea');
     descInput.className = 'strategy-pillar-desc';
+    // rows=1 starts the textarea single-line; autoGrowTextarea expands it
+    // when content actually wraps. Without this the default is rows=2 which
+    // makes every empty card take a row of unused vertical space.
+    descInput.rows = 1;
     descInput.placeholder = opts.placeholder;
     descInput.value = c.description || '';
     descInput.dataset.cardId = c.id;
@@ -695,7 +771,6 @@ function renderStrategyCards(stateKey, containerId, opts){
 function wireStrategyInputs(){
   const visionEl = document.getElementById('strategy-vision');
   const missionEl = document.getElementById('strategy-mission');
-  const foundationEl = document.getElementById('strategy-foundation');
   if(visionEl){
     visionEl.addEventListener('input', e => {
       state.strategy.vision = e.target.value;
@@ -706,13 +781,6 @@ function wireStrategyInputs(){
   if(missionEl){
     missionEl.addEventListener('input', e => {
       state.strategy.mission = e.target.value;
-      autoGrowTextarea(e.target);
-      scheduleAutosave();
-    });
-  }
-  if(foundationEl){
-    foundationEl.addEventListener('input', e => {
-      state.strategy.foundation = e.target.value;
       autoGrowTextarea(e.target);
       scheduleAutosave();
     });
@@ -2392,6 +2460,77 @@ function generateStrategySvg(){
     }
   }
 
+  // Render foundation items as a bullet list with bold titles. Each item is
+  // "• Title: description" wrapped to multiple lines as needed.
+  function renderFoundationCard(){
+    const items = state.strategy.foundation.filter(item => item.title || item.description);
+    if(items.length === 0) return;
+    renderSectionLabel('Foundation');
+    const cardX = PAD;
+    const cardW = W - 2*PAD;
+    const cardPad = CARD_PAD;
+    const itemFont = 13;
+    const itemLH = 20;
+    const itemGap = 6;
+    const bulletText = '• ';
+    const bulletW = svgMeasureText(bulletText, itemFont, '600');
+    const indentX = cardX + cardPad + bulletW + 2;
+    const innerLeftX = cardX + cardPad;
+    const itemLayouts = items.map(item => {
+      const title = item.title || '';
+      const description = item.description || '';
+      const hasTitle = !!title;
+      const hasDesc = !!description;
+      const titleText = hasTitle ? (title + (hasDesc ? ': ' : '')) : '';
+      const titleW = hasTitle ? svgMeasureText(titleText, itemFont, '600') : 0;
+      const firstLineDescX = indentX + titleW;
+      const firstLineDescW = cardW - cardPad - (firstLineDescX - cardX);
+      const subsLineDescW = cardW - cardPad - (indentX - cardX);
+      let descLines = [];
+      if(hasDesc){
+        const words = description.split(/\s+/);
+        let current = '';
+        let availableW = firstLineDescW;
+        for(const word of words){
+          const test = current ? current + ' ' + word : word;
+          const w = svgMeasureText(test, itemFont, '400');
+          if(w <= availableW){
+            current = test;
+          } else {
+            if(current){
+              descLines.push(current);
+              availableW = subsLineDescW;
+            }
+            current = word;
+          }
+        }
+        if(current) descLines.push(current);
+      }
+      return { titleText, titleW, hasTitle, hasDesc, descLines, lineCount: Math.max(1, descLines.length) };
+    });
+    let totalH = cardPad * 2;
+    itemLayouts.forEach((layout, idx) => {
+      totalH += layout.lineCount * itemLH;
+      if(idx < itemLayouts.length - 1) totalH += itemGap;
+    });
+    parts.push(`<rect x="${cardX}" y="${y}" width="${cardW}" height="${totalH}" rx="${CARD_RADIUS}" fill="${C.bgCard}" stroke="${C.border1}"/>`);
+    let cy = y + cardPad;
+    itemLayouts.forEach((layout, idx) => {
+      const baselineY = cy + itemFont - 2;
+      parts.push(`<text x="${innerLeftX}" y="${baselineY}" font-size="${itemFont}" font-weight="700" fill="${C.text3}">•</text>`);
+      if(layout.hasTitle){
+        parts.push(`<text x="${indentX}" y="${baselineY}" font-size="${itemFont}" font-weight="600" fill="${C.text1}">${svgEscape(layout.titleText)}</text>`);
+      }
+      layout.descLines.forEach((line, i) => {
+        const lineX = i === 0 ? (indentX + layout.titleW) : indentX;
+        const lineY = baselineY + i * itemLH;
+        parts.push(`<text x="${lineX}" y="${lineY}" font-size="${itemFont}" font-weight="400" fill="${C.text2}">${svgEscape(line)}</text>`);
+      });
+      cy += layout.lineCount * itemLH + itemGap;
+    });
+    y += totalH;
+  }
+
   // Render two columns of cards row-by-row so opposite rows share the same
   // height (the taller of the two cards in that row), giving a clean grid.
   function renderTwoColumnCards(leftItems, rightItems, leftX, rightX, colW, leftWithTarget, rightWithTarget, leftPlaceholderTitle, rightPlaceholderTitle, startY){
@@ -2436,8 +2575,8 @@ function generateStrategySvg(){
   y += LABEL_FONT + LABEL_GAP;
   y = renderTwoColumnCards(state.strategy.opportunities, state.strategy.goals, leftX, rightX, colW, false, true, 'Opportunity', 'Goal', y) + SECTION_GAP;
 
-  // Foundation
-  renderTextCard('Foundation', state.strategy.foundation, false, 'Values, enablers and operating principles that everything rests on');
+  // Foundation as a bullet list with bold titles
+  renderFoundationCard();
 
   const totalH = y - SECTION_GAP + PAD; // last SECTION_GAP added by renderTextCard isn't needed
   const svgOpen = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${totalH}" width="${W}" height="${totalH}" font-family='${FONT}'>`;

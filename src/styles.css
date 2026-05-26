@@ -108,6 +108,28 @@ html[data-theme="dark"], html[data-theme="dark"] body { background: #1a1a1a; }
 .strategy-pillar-remove:hover{background:var(--danger-bg);color:var(--danger-text)}
 .strategy-pillar-add{background:transparent;border:1px dashed var(--border-1);border-radius:6px;padding:5px 12px;color:var(--text-3);font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;height:30px;line-height:1;transition:border-color .12s, color .12s, background .12s;align-self:flex-start;justify-self:start}
 .strategy-pillar-add:hover{border-color:var(--text-3);color:var(--text-1);background:var(--bg-soft)}
+/* Foundation: a single container card with each principle as an inline row
+   (bullet + bold title + description). Feels like one cohesive base rather
+   than separate elements. */
+.strategy-foundation-list{background:var(--bg-card);border:1px solid var(--border-1);border-radius:8px;padding:12px 16px;display:flex !important;flex-direction:column;gap:2px}
+.strategy-foundation-list .strategy-pillar{background:transparent !important;border:none !important;border-radius:0;padding:0 0 0 18px;min-height:auto;gap:6px;position:relative;display:flex;flex-direction:row;align-items:baseline;flex-wrap:wrap}
+.strategy-foundation-list .strategy-pillar::before{content:"•";position:absolute;left:2px;top:0;color:var(--text-2);font-weight:700;font-size:13px;line-height:1.5}
+.strategy-foundation-list .strategy-pillar-title{flex:0 1 auto;width:auto;min-width:20px;font-size:13px;font-weight:600;line-height:1.5;field-sizing:content}
+.strategy-foundation-list .strategy-pillar-desc{flex:1 1 200px;font-size:13px;line-height:1.5;color:var(--text-2);min-height:0;height:auto;font-weight:400;display:block}
+.strategy-foundation-list .strategy-pillar-remove{position:static;opacity:0;transition:opacity .12s}
+.strategy-foundation-list .strategy-pillar:hover .strategy-pillar-remove{opacity:0.55}
+@media (prefers-color-scheme: dark){
+  .gantt-root:not([data-theme]) .strategy-foundation-list{background:#2e2d2a;border-color:#55554f}
+}
+.gantt-root[data-theme="dark"] .strategy-foundation-list{background:#2e2d2a;border-color:#55554f}
+.strategy-foundation-list .strategy-pillar-remove{position:static;opacity:0;transition:opacity .12s}
+.strategy-foundation-list .strategy-pillar:hover .strategy-pillar-remove{opacity:0.55}
+.strategy-foundation-list .strategy-pillar-add{align-self:flex-start;margin-top:8px}
+/* Dark-mode card background for the foundation list */
+@media (prefers-color-scheme: dark){
+  .gantt-root:not([data-theme]) .strategy-foundation-list{background:#2e2d2a;border-color:#55554f}
+}
+.gantt-root[data-theme="dark"] .strategy-foundation-list{background:#2e2d2a;border-color:#55554f}
 /* Dark mode: strategy cards need a lighter background and stronger border so
    they don't blend into the page chrome */
 @media (prefers-color-scheme: dark){

@@ -55,7 +55,7 @@ Why this happens: macOS marks downloaded files as quarantined and requires eithe
 
 ### Strategy
 - Dedicated Strategy tab for the strategic context that underpins the roadmap (Cmd+2 to switch, Cmd+1 back to Roadmap)
-- Strategy house format: vision, mission, pillars (3-5 cards), opportunities and goals (two-column layout), foundation
+- Strategy house format: vision, mission, pillars (3-5 cards), opportunities and goals (two-column layout), foundation (bullet list of principles with bold titles)
 - Goals carry an optional target value (e.g. "20% growth, 1M bookings") rendered as a highlighted line on the card
 - Same file stores both the roadmap and its strategy
 
@@ -306,7 +306,9 @@ roadmap-app/
     "goals": [
       { "id": "g1", "title": "Goal name", "target": "20% growth", "description": "Context or measurement notes" }
     ],
-    "foundation": "Values, enablers and operating principles"
+    "foundation": [
+      { "id": "f1", "title": "Principle name", "description": "What it means in practice" }
+    ]
   },
   "savedAt": "2026-05-25T12:00:00.000Z"
 }

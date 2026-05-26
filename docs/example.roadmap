@@ -230,7 +230,12 @@
         "target": "Below 7 days from sign-up to first invoice sent"
       }
     ],
-    "foundation": "Customer-funded growth before VC milestones. Small, full-stack teams with clear ownership. Decisions made with data when possible, with judgement when not. Boring tech in the core, experiments at the edges."
+    "foundation": [
+      { "id": "f1", "title": "Customer-funded growth", "description": "Revenue funds the next bet before VC milestones do" },
+      { "id": "f2", "title": "Full-stack teams", "description": "Small teams with clear ownership end-to-end" },
+      { "id": "f3", "title": "Data first, judgement when not", "description": "Decisions made with data when possible, with judgement when not" },
+      { "id": "f4", "title": "Boring core, experiments at the edges", "description": "Reliable tech for the engine, room to try things on the rim" }
+    ]
   },
   "savedAt": "2026-05-26T13:26:02.927Z"
 }
