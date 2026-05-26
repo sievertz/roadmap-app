@@ -70,11 +70,44 @@ html[data-theme="dark"], html[data-theme="dark"] body { background: #1a1a1a; }
   --danger-border:#A32D2D;
 }
 .gantt-header{display:none}
-.gantt-titlebar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-soft);width:100%;height:100%;box-sizing:border-box;overflow:hidden}
-.title-cell{padding:0 !important;background:var(--bg-soft) !important;border-bottom:1px solid var(--border-1)}
-.title-cell .gantt-title{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
-.title-cell .gantt-logo,.title-cell .gantt-logo-emoji,.title-cell img.gantt-logo{width:22px;height:22px}
-.title-cell .gantt-logo-emoji{font-size:18px}
+.app-header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:4px 4px 0 4px;background:transparent;flex-shrink:0;border-bottom:1px solid var(--border-1);margin-bottom:-1px}
+.gantt-titlebar{display:flex;align-items:center;gap:8px;padding:6px 8px;background:transparent;border:none;box-sizing:border-box;overflow:hidden;min-width:0;flex:0 1 auto}
+.gantt-titlebar .gantt-title{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:320px;color:var(--text-1)}
+.gantt-titlebar .gantt-logo,.gantt-titlebar .gantt-logo-emoji,.gantt-titlebar img.gantt-logo{width:22px;height:22px}
+.gantt-titlebar .gantt-logo-emoji{font-size:18px}
+.tab-strip{display:flex;gap:0;background:transparent;border:none;padding:0;flex-shrink:0}
+.tab-btn{background:transparent;border:none;border-bottom:2px solid transparent;padding:8px 16px;margin-bottom:-1px;font-size:13px;font-weight:500;color:var(--text-3);cursor:pointer;border-radius:0;font-family:inherit;transition:color .12s, border-color .12s}
+.tab-btn:hover{color:var(--text-2)}
+.tab-btn.active{color:var(--text-1);border-bottom-color:var(--text-1)}
+.view-container{flex:1;display:flex;flex-direction:column;min-height:0}
+.strategy-house{padding:20px 24px 32px 24px;max-width:1200px;margin:0 auto;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:14px}
+.strategy-section{background:var(--bg-card);border:1px solid var(--border-1);border-radius:8px;padding:14px 18px;display:flex;flex-direction:column;gap:6px}
+.strategy-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3)}
+.strategy-input{width:100%;border:none;background:transparent;color:var(--text-1);font-family:inherit;font-size:14px;line-height:1.5;resize:vertical;outline:none;padding:0;min-height:48px;box-sizing:border-box}
+.strategy-input::placeholder{color:var(--text-3);font-style:italic}
+.strategy-input-headline{font-size:18px;font-weight:600;line-height:1.35;min-height:34px}
+.strategy-block{display:flex;flex-direction:column;gap:8px}
+.strategy-two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width: 720px){.strategy-two-col{grid-template-columns:1fr}}
+.strategy-cards-col{display:flex;flex-direction:column;gap:10px}
+.strategy-cards-col .strategy-pillar{min-height:0}
+.strategy-cards-col .strategy-pillar-desc{min-height:36px}
+/* Match opportunity card heights to goal card heights (goals have an extra
+   target row, so opportunity descriptions get a taller min-height to compensate) */
+#strategy-opportunities .strategy-pillar-desc{min-height:60px}
+.strategy-pillars{display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px}
+.strategy-pillar{background:var(--bg-card);border:1px solid var(--border-1);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:6px;position:relative}
+.strategy-pillar-title{width:100%;border:none;background:transparent;color:var(--text-1);font-family:inherit;font-size:14px;font-weight:600;outline:none;padding:0}
+.strategy-pillar-title::placeholder{color:var(--text-3);font-style:italic;font-weight:500}
+.strategy-goal-target{width:100%;border:none;background:transparent;color:var(--info-text);font-family:inherit;font-size:13px;font-weight:600;outline:none;padding:0;font-variant-numeric:tabular-nums}
+.strategy-goal-target::placeholder{color:var(--text-3);font-style:italic;font-weight:500}
+.strategy-pillar-desc{width:100%;border:none;background:transparent;color:var(--text-2);font-family:inherit;font-size:12px;line-height:1.45;resize:vertical;outline:none;padding:0;min-height:48px;flex:1}
+.strategy-pillar-desc::placeholder{color:var(--text-3);font-style:italic}
+.strategy-pillar-remove{position:absolute;top:6px;right:6px;background:transparent;border:none;color:var(--text-3);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:14px;line-height:1;padding:0;opacity:0;transition:opacity .12s, background .12s, color .12s}
+.strategy-pillar:hover .strategy-pillar-remove{opacity:1}
+.strategy-pillar-remove:hover{background:var(--danger-bg);color:var(--danger-text)}
+.strategy-pillar-add{background:transparent;border:1px dashed var(--border-1);border-radius:6px;padding:5px 12px;color:var(--text-3);font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;height:30px;line-height:1;transition:border-color .12s, color .12s, background .12s;align-self:flex-start;justify-self:start}
+.strategy-pillar-add:hover{border-color:var(--text-3);color:var(--text-1);background:var(--bg-soft)}
 .gantt-logo-btn{background:transparent;border:none;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;position:relative;border-radius:4px;transition:background .12s}
 .gantt-logo-btn:hover{background:var(--bg-card)}
 .gantt-logo{width:26px;height:26px;flex-shrink:0;border-radius:4px;display:block}
@@ -217,6 +250,8 @@ body.fit-mode .legend-add-btn,body.fit-mode .legend-edit-hint{font-size:9px}
 .welcome-recent .recent-name{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .welcome-recent .recent-path{font-size:11px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;max-width:200px}
 .hide-when-empty{display:none}
+.welcome.active ~ .app-header,
+.welcome.active ~ .view-container,
 .welcome.active ~ .gantt-grid-wrap,
 .welcome.active ~ .add-row,
 .welcome.active ~ .legend,

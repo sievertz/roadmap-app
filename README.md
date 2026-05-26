@@ -42,9 +42,16 @@ Why this happens: macOS marks downloaded files as quarantined and requires eithe
 
 ### Timeline
 - Month-level Gantt with year/quarter/month bands
-- Add or remove years dynamically
+- Add years dynamically in either direction: "+" on the last year band extends forward, "+" on the first year band extends backwards in time (initiative positions are preserved against their absolute calendar dates)
 - Click the pencil on a year band to attach notes for that year
 - Search box in the INITIATIVE header filters rows live
+- Opening a roadmap lands the scroll position on the previous calendar month so today's context is visible immediately
+
+### Strategy
+- Dedicated Strategy tab for the strategic context that underpins the roadmap (Cmd+2 to switch, Cmd+1 back to Roadmap)
+- Strategy house format: vision, mission, pillars (3-5 cards), opportunities and goals (two-column layout), foundation
+- Goals carry an optional target value (e.g. "20% growth, 1M bookings") rendered as a highlighted line on the card
+- Same file stores both the roadmap and its strategy
 
 ### Files and windows
 - Multi-window: each .roadmap file opens in its own window
@@ -56,8 +63,10 @@ Why this happens: macOS marks downloaded files as quarantined and requires eithe
 - Recents list filters out files that have been deleted from disk
 
 ### Export and distribution
-- SVG export for presentations (vector, scales infinitely, matches current theme)
-- HTML export
+- SVG export of the roadmap, either the full timeline or the currently visible area (vector, scales infinitely, matches current theme)
+- PNG export at 2x DPI for tools that don't accept SVG (Google Slides, Notion, image-only fields)
+- HTML export for sharing a static snapshot
+- Strategy SVG and PNG export with the same theme treatment
 - Cmd+P opens the macOS print dialog with a clean print layout
 - Auto-updater pulls new versions from GitHub Releases on app start
 
@@ -157,8 +166,10 @@ Then on GitHub: open the draft, add release notes, click Publish. Auto-updaters 
 | Cmd+W | Close window |
 | Cmd+S | Save |
 | Cmd+Shift+S | Save As |
+| Cmd+1 | Roadmap tab |
+| Cmd+2 | Strategy tab |
 | Cmd+Shift+E | Export as HTML |
-| Cmd+Shift+P | Export as SVG |
+| Cmd+Shift+P | Export as SVG (full) |
 | Cmd+P | Print |
 | Cmd+Z | Undo |
 | Cmd+Shift+Z | Redo |
@@ -244,7 +255,7 @@ roadmap-app/
 
 ```json
 {
-  "v": 6,
+  "v": 7,
   "config": {
     "startYear": 2026,
     "startMonth": 1,
@@ -274,7 +285,21 @@ roadmap-app/
   "legend": [
     { "id": "committed", "label": "Committed", "color": "#378ADD" }
   ],
-  "savedAt": "2026-05-20T12:00:00.000Z"
+  "strategy": {
+    "vision": "Where we want to be in 3-5 years",
+    "mission": "What we do, for whom, and why",
+    "pillars": [
+      { "id": "p1", "title": "Pillar name", "description": "What it means in practice" }
+    ],
+    "opportunities": [
+      { "id": "o1", "title": "Opportunity name", "description": "Why it is worth pursuing" }
+    ],
+    "goals": [
+      { "id": "g1", "title": "Goal name", "target": "20% growth", "description": "Context or measurement notes" }
+    ],
+    "foundation": "Values, enablers and operating principles"
+  },
+  "savedAt": "2026-05-25T12:00:00.000Z"
 }
 ```
 
@@ -283,6 +308,8 @@ Optional config fields:
 - `title`: display name shown in the title bar, independent of the filename. Falls back to filename without extension if not set
 - `logo`: either a `data:image/...;base64,...` URL or a short emoji string (e.g. `🚀`). Falls back to the default SVG logo if not set
 - `yearNotes`: object mapping year strings to notes text
+
+The `strategy` field stores the content of the Strategy tab. All sub-fields are optional - missing sections default to empty arrays or strings. Older files saved with `v: 6` are migrated on read to include an empty strategy.
 
 The schema version (`v` field) is used for migration when reading older files.
 

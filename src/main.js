@@ -12,7 +12,7 @@ import { relaunch } from "@tauri-apps/plugin-process";
 
 // ----- Constants -----
 
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 const AUTOSAVE_DEBOUNCE_MS = 400;
 
 const DEFAULT_CONFIG = {
@@ -45,10 +45,33 @@ const LEGEND_DEFAULTS = [
 
 // ----- State -----
 
+const DEFAULT_STRATEGY = {
+  vision: '',
+  mission: '',
+  pillars: [
+    { id: 'p1', title: '', description: '' },
+    { id: 'p2', title: '', description: '' },
+    { id: 'p3', title: '', description: '' }
+  ],
+  opportunities: [
+    { id: 'o1', title: '', description: '' },
+    { id: 'o2', title: '', description: '' },
+    { id: 'o3', title: '', description: '' }
+  ],
+  goals: [
+    { id: 'g1', title: '', target: '', description: '' },
+    { id: 'g2', title: '', target: '', description: '' },
+    { id: 'g3', title: '', target: '', description: '' }
+  ],
+  foundation: ''
+};
+
 const state = {
   config: JSON.parse(JSON.stringify(DEFAULT_CONFIG)),
   initiatives: [],
   legend: deepClone(LEGEND_DEFAULTS),
+  strategy: JSON.parse(JSON.stringify(DEFAULT_STRATEGY)),
+  activeTab: 'roadmap',
   selected: null,
   editingLegend: null,
   pendingConfirm: null,
@@ -286,6 +309,7 @@ function buildSerializableData(){
     config: state.config,
     initiatives: state.initiatives,
     legend: state.legend,
+    strategy: state.strategy,
     savedAt: new Date().toISOString()
   };
 }
@@ -323,6 +347,31 @@ function applyLoadedData(data){
     state.initiatives = data.initiatives;
   }
   if(Array.isArray(data.legend)) state.legend = data.legend;
+  // Strategy (added in schema v7). Older files default to empty strategy.
+  if(data.strategy && typeof data.strategy === 'object'){
+    const normCards = (arr, fallback, idPrefix, withTarget) => Array.isArray(arr) && arr.length > 0
+      ? arr.map((c, i) => {
+          const card = {
+            id: c.id || (idPrefix + (i + 1)),
+            title: typeof c.title === 'string' ? c.title : '',
+            description: typeof c.description === 'string' ? c.description : ''
+          };
+          if(withTarget) card.target = typeof c.target === 'string' ? c.target : '';
+          return card;
+        })
+      : JSON.parse(JSON.stringify(fallback));
+    state.strategy = {
+      vision: typeof data.strategy.vision === 'string' ? data.strategy.vision : '',
+      mission: typeof data.strategy.mission === 'string' ? data.strategy.mission : '',
+      pillars: normCards(data.strategy.pillars, DEFAULT_STRATEGY.pillars, 'p'),
+      opportunities: normCards(data.strategy.opportunities, DEFAULT_STRATEGY.opportunities, 'o'),
+      // Migrate old `principles` field to new `goals` if present (pre-release rename)
+      goals: normCards(data.strategy.goals || data.strategy.principles, DEFAULT_STRATEGY.goals, 'g', true),
+      foundation: typeof data.strategy.foundation === 'string' ? data.strategy.foundation : ''
+    };
+  } else {
+    state.strategy = JSON.parse(JSON.stringify(DEFAULT_STRATEGY));
+  }
 }
 
 async function persistToFile(path){
@@ -464,6 +513,165 @@ async function renderWelcome(){
   }
 }
 
+// ----- Tabs (Roadmap / Strategy) -----
+
+function switchTab(tab){
+  if(tab !== 'roadmap' && tab !== 'strategy') return;
+  state.activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  document.querySelectorAll('.view-container').forEach(view => {
+    view.style.display = view.dataset.view === tab ? '' : 'none';
+  });
+  if(tab === 'strategy') renderStrategy();
+}
+
+function renderStrategy(){
+  const visionEl = document.getElementById('strategy-vision');
+  const missionEl = document.getElementById('strategy-mission');
+  const foundationEl = document.getElementById('strategy-foundation');
+  if(visionEl && document.activeElement !== visionEl) visionEl.value = state.strategy.vision || '';
+  if(missionEl && document.activeElement !== missionEl) missionEl.value = state.strategy.mission || '';
+  if(foundationEl && document.activeElement !== foundationEl) foundationEl.value = state.strategy.foundation || '';
+  renderStrategyCards('pillars', 'strategy-pillars', { label: 'Pillar', noun: 'pillar', placeholder: 'What this pillar means in practice', max: 5, idPrefix: 'p' });
+  renderStrategyCards('opportunities', 'strategy-opportunities', { label: 'Opportunity', noun: 'opportunity', placeholder: 'Why this is worth pursuing', max: 8, idPrefix: 'o' });
+  renderStrategyCards('goals', 'strategy-goals', { label: 'Goal', noun: 'goal', placeholder: 'Context, scope or measurement notes', max: 8, idPrefix: 'g', withTarget: true, targetPlaceholder: 'Target (e.g. 20% growth, 1M bookings)' });
+}
+
+function renderStrategyCards(stateKey, containerId, opts){
+  const wrap = document.getElementById(containerId);
+  if(!wrap) return;
+  const block = wrap.parentElement;
+  const items = state.strategy[stateKey];
+  // Preserve focus across re-renders by remembering which card field was active
+  const activeEl = document.activeElement;
+  let focusCardId = null, focusField = null, focusStart = 0, focusEnd = 0;
+  if(activeEl && activeEl.dataset && activeEl.dataset.cardId && activeEl.dataset.section === stateKey){
+    focusCardId = activeEl.dataset.cardId;
+    focusField = activeEl.dataset.field;
+    focusStart = activeEl.selectionStart;
+    focusEnd = activeEl.selectionEnd;
+  }
+  wrap.innerHTML = '';
+  // Remove any add button left from a previous render (it lives as a sibling
+  // of the cards container so the cards-grid is free to auto-fit its tracks)
+  if(block){
+    block.querySelectorAll('.strategy-pillar-add').forEach(b => b.remove());
+  }
+  items.forEach((c, idx) => {
+    const card = document.createElement('div');
+    card.className = 'strategy-pillar';
+    const titleInput = document.createElement('input');
+    titleInput.type = 'text';
+    titleInput.className = 'strategy-pillar-title';
+    titleInput.placeholder = opts.label + ' ' + (idx + 1);
+    titleInput.value = c.title || '';
+    titleInput.dataset.cardId = c.id;
+    titleInput.dataset.section = stateKey;
+    titleInput.dataset.field = 'title';
+    titleInput.addEventListener('input', e => {
+      c.title = e.target.value;
+      scheduleAutosave();
+    });
+    card.appendChild(titleInput);
+    // Optional target field (used by Goals to capture the measurable target value)
+    let targetInput = null;
+    if(opts.withTarget){
+      targetInput = document.createElement('input');
+      targetInput.type = 'text';
+      targetInput.className = 'strategy-goal-target';
+      targetInput.placeholder = opts.targetPlaceholder || 'Target';
+      targetInput.value = c.target || '';
+      targetInput.dataset.cardId = c.id;
+      targetInput.dataset.section = stateKey;
+      targetInput.dataset.field = 'target';
+      targetInput.addEventListener('input', e => {
+        c.target = e.target.value;
+        scheduleAutosave();
+      });
+      card.appendChild(targetInput);
+    }
+    const descInput = document.createElement('textarea');
+    descInput.className = 'strategy-pillar-desc';
+    descInput.placeholder = opts.placeholder;
+    descInput.value = c.description || '';
+    descInput.dataset.cardId = c.id;
+    descInput.dataset.section = stateKey;
+    descInput.dataset.field = 'description';
+    descInput.addEventListener('input', e => {
+      c.description = e.target.value;
+      scheduleAutosave();
+    });
+    card.appendChild(descInput);
+    // Remove button - only if more than 1 card remains
+    if(items.length > 1){
+      const rm = document.createElement('button');
+      rm.className = 'strategy-pillar-remove';
+      rm.textContent = '×';
+      rm.title = 'Remove ' + opts.noun;
+      rm.addEventListener('click', () => {
+        captureSnapshot();
+        state.strategy[stateKey] = items.filter(x => x.id !== c.id);
+        scheduleAutosave();
+        renderStrategyCards(stateKey, containerId, opts);
+      });
+      card.appendChild(rm);
+    }
+    wrap.appendChild(card);
+    // Restore focus + caret position if this was the focused card
+    if(focusCardId === c.id){
+      let target = titleInput;
+      if(focusField === 'description') target = descInput;
+      else if(focusField === 'target' && targetInput) target = targetInput;
+      target.focus();
+      try { target.setSelectionRange(focusStart, focusEnd); } catch(e){}
+    }
+  });
+  // Add-card button - placed as sibling of cards container (inside strategy-block)
+  // so it doesn't disturb the grid auto-fit sizing of the cards
+  if(items.length < opts.max){
+    const add = document.createElement('button');
+    add.className = 'strategy-pillar-add';
+    add.textContent = '+ Add ' + opts.noun;
+    add.addEventListener('click', () => {
+      captureSnapshot();
+      const nextId = opts.idPrefix + (Date.now().toString(36));
+      state.strategy[stateKey].push({ id: nextId, title: '', description: '' });
+      scheduleAutosave();
+      renderStrategyCards(stateKey, containerId, opts);
+    });
+    (block || wrap).appendChild(add);
+  }
+}
+
+function wireStrategyInputs(){
+  const visionEl = document.getElementById('strategy-vision');
+  const missionEl = document.getElementById('strategy-mission');
+  const foundationEl = document.getElementById('strategy-foundation');
+  if(visionEl){
+    visionEl.addEventListener('input', e => {
+      state.strategy.vision = e.target.value;
+      scheduleAutosave();
+    });
+  }
+  if(missionEl){
+    missionEl.addEventListener('input', e => {
+      state.strategy.mission = e.target.value;
+      scheduleAutosave();
+    });
+  }
+  if(foundationEl){
+    foundationEl.addEventListener('input', e => {
+      state.strategy.foundation = e.target.value;
+      scheduleAutosave();
+    });
+  }
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+}
+
 async function renderWelcomeRecent(){
   try {
     const recents = await invoke('get_recent_files');
@@ -506,20 +714,13 @@ function render(){
   renderEditPanel();
   renderLegend();
   renderWelcome();
+  renderStrategy();
   applyFitToHeight();
   scheduleAutosave();
 }
 
 function renderGrid(){
   const grid = document.getElementById('grid');
-  // Detach the titlebar before wiping grid so getElementById can still
-  // find it when we re-attach it into the new title cell. Without this
-  // step, repeated renders lose the logo+title (the titlebar gets removed
-  // along with the rest of grid.innerHTML).
-  const titlebarRescue = document.getElementById('gantt-titlebar');
-  if(titlebarRescue && titlebarRescue.parentElement && titlebarRescue.parentElement !== document.body){
-    document.body.appendChild(titlebarRescue);
-  }
   grid.innerHTML = '';
 
   const qs = months();
@@ -536,14 +737,13 @@ function renderGrid(){
     acc += ys[i].span;
   }
 
-  // Title cell - spans year and quarter band rows in the sticky column.
-  // Re-parents the existing .gantt-titlebar element (with logo + title) into the grid.
-  const titleCell = document.createElement('div');
-  titleCell.className = 'gh sticky-col title-cell';
-  titleCell.style.gridRow = '1 / span 2';
-  const titlebarEl = document.getElementById('gantt-titlebar');
-  if(titlebarEl) titleCell.appendChild(titlebarEl);
-  grid.appendChild(titleCell);
+  // Empty sticky-col header that spans the year + quarter band rows. The
+  // logo + roadmap title used to live here, but they now live in the
+  // app-header above the grid (shared across Roadmap and Strategy tabs).
+  const stickyHeader = document.createElement('div');
+  stickyHeader.className = 'gh sticky-col title-cell';
+  stickyHeader.style.gridRow = '1 / span 2';
+  grid.appendChild(stickyHeader);
   ys.forEach((y, idx) => {
     const c = document.createElement('div');
     c.className = 'gh year-band';
@@ -1566,6 +1766,33 @@ async function menuExportPng(opts){
   }
 }
 
+async function menuExportStrategySvg(){
+  try {
+    const defaultName = (basenameOf(currentFilePath) || 'roadmap') + '-strategy.svg';
+    const path = await invoke("export_svg_dialog", { defaultName });
+    if(!path) return;
+    const svg = generateStrategySvg();
+    await invoke('write_svg_file', { path, contents: svg });
+  } catch(e){
+    console.error("[Roadmap] Strategy SVG export failed:", e);
+    alert("Could not export strategy SVG: " + (e && e.message ? e.message : e));
+  }
+}
+
+async function menuExportStrategyPng(){
+  try {
+    const defaultName = (basenameOf(currentFilePath) || 'roadmap') + '-strategy.png';
+    const path = await invoke("export_png_dialog", { defaultName });
+    if(!path) return;
+    const svg = generateStrategySvg();
+    const bytes = await svgToPng(svg, 2);
+    await invoke('write_png_file', { path, bytes });
+  } catch(e){
+    console.error("[Roadmap] Strategy PNG export failed:", e);
+    alert("Could not export strategy PNG: " + (e && e.message ? e.message : e));
+  }
+}
+
 // ----- SVG generator (builds vector export from state directly, no DOM rasterization) -----
 
 function svgEscape(s){
@@ -1592,6 +1819,31 @@ function svgTruncate(text, maxW, fontSize, fontWeight){
     else { hi = mid - 1; }
   }
   return lo > 0 ? text.slice(0, lo) + '…' : '';
+}
+
+// Word-wrap a string into lines that each fit within maxW pixels at the given
+// font. Long words that overflow alone are pushed to their own line as-is
+// (we don't break inside words for v1).
+function svgWrapText(text, maxW, fontSize, fontWeight){
+  if(!text) return [];
+  const lines = [];
+  // Preserve user-inserted line breaks - wrap each input line independently
+  text.split(/\r?\n/).forEach(raw => {
+    const words = raw.split(/\s+/).filter(Boolean);
+    if(words.length === 0){ lines.push(''); return; }
+    let current = '';
+    for(const word of words){
+      const test = current ? current + ' ' + word : word;
+      if(svgMeasureText(test, fontSize, fontWeight) <= maxW){
+        current = test;
+      } else {
+        if(current) lines.push(current);
+        current = word;
+      }
+    }
+    if(current) lines.push(current);
+  });
+  return lines;
 }
 
 function generateExportSvg(opts){
@@ -1878,6 +2130,198 @@ function generateExportSvg(opts){
   return parts.join('');
 }
 
+// ----- Strategy SVG generator -----
+// Renders the strategy house (vision, mission, pillars, opportunities, goals,
+// foundation) as a single static SVG. Lays out vertically with a fixed total
+// width, dynamic height based on content text wrap.
+function generateStrategySvg(){
+  const root = document.querySelector('.gantt-root');
+  const cs = root ? getComputedStyle(root) : null;
+  const cssVar = (name, fallback) => {
+    if(!cs) return fallback;
+    const v = cs.getPropertyValue(name).trim();
+    return v || fallback;
+  };
+  const C = {
+    bgCard: cssVar('--bg-card', '#fdfaf1'),
+    border1: cssVar('--border-1', '#c9c5b8'),
+    text1: cssVar('--text-1', '#1a1a1a'),
+    text2: cssVar('--text-2', '#5f5e5a'),
+    text3: cssVar('--text-3', '#a09e96'),
+    infoText: cssVar('--info-text', '#185FA5')
+  };
+  const FONT = '-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, system-ui, sans-serif';
+  const W = 1200;
+  const PAD = 24;
+  const SECTION_GAP = 14;
+  const CARD_PAD = 14;
+  const CARD_RADIUS = 8;
+  const CARD_GAP = 12;
+  const LABEL_FONT = 11;
+  const LABEL_GAP = 6;
+  const parts = [];
+  let y = PAD;
+
+  // Helper: render a label-above-block (used for pillars/opportunities/goals
+  // section headers since their labels sit outside the card).
+  function renderSectionLabel(text){
+    parts.push(`<text x="${PAD}" y="${y + LABEL_FONT}" font-size="${LABEL_FONT}" font-weight="600" fill="${C.text3}" letter-spacing="0.88">${svgEscape(text.toUpperCase())}</text>`);
+    y += LABEL_FONT + LABEL_GAP;
+  }
+
+  // Helper: render a full-width text card with label inside (vision, mission, foundation)
+  function renderTextCard(label, text, headline, placeholder){
+    const contentW = W - 2*PAD - 2*CARD_PAD;
+    const isEmpty = !text;
+    const display = text || placeholder || '';
+    const fontSize = headline ? 18 : 14;
+    const lineHeight = headline ? 26 : 21;
+    const weight = headline ? '600' : '400';
+    const lines = svgWrapText(display, contentW, fontSize, weight);
+    const renderLines = lines.length > 0 ? lines : [''];
+    const textBlockH = renderLines.length * lineHeight;
+    const cardH = CARD_PAD + LABEL_FONT + LABEL_GAP + textBlockH + CARD_PAD;
+    const cardX = PAD, cardY = y;
+    parts.push(`<rect x="${cardX}" y="${cardY}" width="${W - 2*PAD}" height="${cardH}" rx="${CARD_RADIUS}" fill="${C.bgCard}" stroke="${C.border1}"/>`);
+    parts.push(`<text x="${cardX + CARD_PAD}" y="${cardY + CARD_PAD + LABEL_FONT - 1}" font-size="${LABEL_FONT}" font-weight="600" fill="${C.text3}" letter-spacing="0.88">${svgEscape(label.toUpperCase())}</text>`);
+    let ty = cardY + CARD_PAD + LABEL_FONT + LABEL_GAP + fontSize - 2;
+    const fill = isEmpty ? C.text3 : C.text1;
+    const fontStyleAttr = isEmpty ? ' font-style="italic"' : '';
+    renderLines.forEach((line, i) => {
+      parts.push(`<text x="${cardX + CARD_PAD}" y="${ty + i*lineHeight}" font-size="${fontSize}" font-weight="${weight}" fill="${fill}"${fontStyleAttr}>${svgEscape(line)}</text>`);
+    });
+    y = cardY + cardH + SECTION_GAP;
+  }
+
+  // Helper: render a horizontal grid of cards (used for pillars). Cards share
+  // a single computed height based on the tallest content.
+  function renderCardRow(items, cardWidth, placeholderTitle, placeholderDesc, idPrefix){
+    const titleFont = 14, titleLH = 20;
+    const descFont = 12, descLH = 18;
+    const contentW = cardWidth - 2*CARD_PAD;
+    const cardData = items.map((c, idx) => {
+      const titleDisplay = c.title || (placeholderTitle + ' ' + (idx + 1));
+      const descDisplay = c.description || placeholderDesc;
+      const titleLines = svgWrapText(titleDisplay, contentW, titleFont, '600');
+      const descLines = svgWrapText(descDisplay, contentW, descFont, '400');
+      return {
+        titleLines: titleLines.length ? titleLines : [''],
+        descLines: descLines.length ? descLines : [''],
+        titleEmpty: !c.title,
+        descEmpty: !c.description
+      };
+    });
+    const maxH = Math.max(...cardData.map(d => CARD_PAD + d.titleLines.length*titleLH + 6 + d.descLines.length*descLH + CARD_PAD));
+    cardData.forEach((d, i) => {
+      const cardX = PAD + i * (cardWidth + CARD_GAP);
+      parts.push(`<rect x="${cardX}" y="${y}" width="${cardWidth}" height="${maxH}" rx="${CARD_RADIUS}" fill="${C.bgCard}" stroke="${C.border1}"/>`);
+      let ty = y + CARD_PAD + titleFont - 2;
+      d.titleLines.forEach((line, idx) => {
+        const fill = d.titleEmpty ? C.text3 : C.text1;
+        const style = d.titleEmpty ? ' font-style="italic"' : '';
+        parts.push(`<text x="${cardX + CARD_PAD}" y="${ty + idx*titleLH}" font-size="${titleFont}" font-weight="600" fill="${fill}"${style}>${svgEscape(line)}</text>`);
+      });
+      ty += d.titleLines.length*titleLH + 6 + descFont - 4;
+      d.descLines.forEach((line, idx) => {
+        const fill = d.descEmpty ? C.text3 : C.text2;
+        const style = d.descEmpty ? ' font-style="italic"' : '';
+        parts.push(`<text x="${cardX + CARD_PAD}" y="${ty + idx*descLH}" font-size="${descFont}" fill="${fill}"${style}>${svgEscape(line)}</text>`);
+      });
+    });
+    y += maxH + SECTION_GAP;
+  }
+
+  // Helper: render a single card stack (used for opportunities/goals columns).
+  // Returns the bottom Y position so callers can align columns.
+  function renderCardStack(items, cardX, cardWidth, withTarget, placeholderTitle, placeholderDesc, placeholderTarget, startY){
+    const titleFont = 14, titleLH = 20;
+    const targetFont = 13, targetLH = 19;
+    const descFont = 12, descLH = 18;
+    const contentW = cardWidth - 2*CARD_PAD;
+    let cy = startY;
+    items.forEach((c, idx) => {
+      const titleDisplay = c.title || (placeholderTitle + ' ' + (idx + 1));
+      const targetDisplay = withTarget ? (c.target || placeholderTarget) : '';
+      const descDisplay = c.description || placeholderDesc;
+      const titleLines = svgWrapText(titleDisplay, contentW, titleFont, '600');
+      const targetLines = withTarget ? svgWrapText(targetDisplay, contentW, targetFont, '600') : [];
+      const descLines = svgWrapText(descDisplay, contentW, descFont, '400');
+      const renderTitle = titleLines.length ? titleLines : [''];
+      const renderTarget = withTarget ? (targetLines.length ? targetLines : ['']) : [];
+      const renderDesc = descLines.length ? descLines : [''];
+      const cardH = CARD_PAD
+        + renderTitle.length * titleLH
+        + (withTarget ? 4 + renderTarget.length * targetLH : 0)
+        + 4 + renderDesc.length * descLH
+        + CARD_PAD;
+      parts.push(`<rect x="${cardX}" y="${cy}" width="${cardWidth}" height="${cardH}" rx="${CARD_RADIUS}" fill="${C.bgCard}" stroke="${C.border1}"/>`);
+      let ty = cy + CARD_PAD + titleFont - 2;
+      const titleEmpty = !c.title;
+      renderTitle.forEach((line, i) => {
+        const fill = titleEmpty ? C.text3 : C.text1;
+        const style = titleEmpty ? ' font-style="italic"' : '';
+        parts.push(`<text x="${cardX + CARD_PAD}" y="${ty + i*titleLH}" font-size="${titleFont}" font-weight="600" fill="${fill}"${style}>${svgEscape(line)}</text>`);
+      });
+      ty += renderTitle.length * titleLH;
+      if(withTarget){
+        ty += 4 + targetFont - 4;
+        const targetEmpty = !c.target;
+        renderTarget.forEach((line, i) => {
+          const fill = targetEmpty ? C.text3 : C.infoText;
+          const style = targetEmpty ? ' font-style="italic"' : '';
+          parts.push(`<text x="${cardX + CARD_PAD}" y="${ty + i*targetLH}" font-size="${targetFont}" font-weight="600" fill="${fill}"${style}>${svgEscape(line)}</text>`);
+        });
+        ty += renderTarget.length * targetLH;
+      }
+      ty += 4 + descFont - 4;
+      const descEmpty = !c.description;
+      renderDesc.forEach((line, i) => {
+        const fill = descEmpty ? C.text3 : C.text2;
+        const style = descEmpty ? ' font-style="italic"' : '';
+        parts.push(`<text x="${cardX + CARD_PAD}" y="${ty + i*descLH}" font-size="${descFont}" fill="${fill}"${style}>${svgEscape(line)}</text>`);
+      });
+      cy += cardH;
+      if(idx < items.length - 1) cy += 10;
+    });
+    return cy;
+  }
+
+  // We need total height before we can write the <svg> tag, so we run the
+  // layout into `parts` and track `y`, then prepend the <svg> wrapper.
+
+  // Vision (headline)
+  renderTextCard('Vision', state.strategy.vision, true, 'A clear, ambitious picture of where we want to be');
+  // Mission
+  renderTextCard('Mission', state.strategy.mission, false, 'What we do, for whom, and why');
+
+  // Pillars
+  renderSectionLabel('Pillars');
+  const pillarCount = state.strategy.pillars.length || 1;
+  const totalRowW = W - 2*PAD;
+  const pillarCardW = (totalRowW - CARD_GAP*(pillarCount-1)) / pillarCount;
+  renderCardRow(state.strategy.pillars, pillarCardW, 'Pillar', 'What this pillar means in practice', 'p');
+
+  // Opportunities + Goals (2 columns)
+  const colW = (totalRowW - 20) / 2;
+  const leftX = PAD;
+  const rightX = PAD + colW + 20;
+  // Render labels
+  parts.push(`<text x="${leftX}" y="${y + LABEL_FONT}" font-size="${LABEL_FONT}" font-weight="600" fill="${C.text3}" letter-spacing="0.88">${svgEscape('OPPORTUNITIES')}</text>`);
+  parts.push(`<text x="${rightX}" y="${y + LABEL_FONT}" font-size="${LABEL_FONT}" font-weight="600" fill="${C.text3}" letter-spacing="0.88">${svgEscape('GOALS')}</text>`);
+  y += LABEL_FONT + LABEL_GAP;
+  const colStartY = y;
+  const leftBottomY = renderCardStack(state.strategy.opportunities, leftX, colW, false, 'Opportunity', 'Why this is worth pursuing', null, colStartY);
+  const rightBottomY = renderCardStack(state.strategy.goals, rightX, colW, true, 'Goal', 'Context, scope or measurement notes', 'Target (e.g. 20% growth)', colStartY);
+  y = Math.max(leftBottomY, rightBottomY) + SECTION_GAP;
+
+  // Foundation
+  renderTextCard('Foundation', state.strategy.foundation, false, 'Values, enablers and operating principles that everything rests on');
+
+  const totalH = y - SECTION_GAP + PAD; // last SECTION_GAP added by renderTextCard isn't needed
+  const svgOpen = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${totalH}" width="${W}" height="${totalH}" font-family='${FONT}'>`;
+  return svgOpen + parts.join('') + '</svg>';
+}
+
 // Generate a self-contained HTML export with current state baked in.
 // Re-uses the index.html structure but inlines the styles and state.
 async function generateExportHtml(){
@@ -1919,6 +2363,9 @@ async function generateExportHtml(){
 // ----- Event wiring -----
 
 function wireEvents(){
+  // Tab strip + strategy field inputs
+  wireStrategyInputs();
+
   // Inline rename the roadmap title (H1). Saves to state.config.title.
   const titleEl = document.getElementById('gantt-title');
   if(titleEl){
@@ -2093,6 +2540,12 @@ async function wireMenuEvents(){
   await listen('menu:export_svg_visible', () => menuExportSvg({ visibleOnly: true }));
   await listen('menu:export_png', () => menuExportPng());
   await listen('menu:export_png_visible', () => menuExportPng({ visibleOnly: true }));
+  await listen('menu:export_strategy_svg', () => menuExportStrategySvg());
+  await listen('menu:export_strategy_png', () => menuExportStrategyPng());
+  await listen('menu:tab', (event) => {
+    const tab = event.payload; // 'roadmap' | 'strategy'
+    switchTab(tab);
+  });
   await listen('menu:check_updates', () => checkForUpdates({ verbose: true }));
   await listen('menu:fit_to_height', toggleFitToHeight);
   await listen('menu:undo', () => handleUndoShortcut('undo'));
@@ -2310,11 +2763,14 @@ function applyFitToHeight(){
   // compact height that fit-mode CSS produces
   const legendEl = document.getElementById('legend');
   const legendH = legendEl ? legendEl.offsetHeight : 40;
-  // Fixed non-row space: title cell + year band + quarter band + month header + padding + borders
-  const FIXED_HEADER = 150;
+  // App-header (logo + title + tabs) sits above the grid view in v0.1.20+
+  const appHeaderEl = document.getElementById('app-header');
+  const appHeaderH = appHeaderEl ? appHeaderEl.offsetHeight : 48;
+  // Fixed non-row space inside the grid card: year band + quarter band + month header + padding + borders
+  const FIXED_GRID_HEADER = 110;
   // Buffer (small margin + breathing room)
   const BUFFER = 30;
-  const available = window.innerHeight - FIXED_HEADER - legendH - BUFFER;
+  const available = window.innerHeight - appHeaderH - FIXED_GRID_HEADER - legendH - BUFFER;
   const optimal = Math.max(28, Math.min(80, Math.floor(available / numRows)));
   root.style.setProperty('--row-h', optimal + 'px');
 }

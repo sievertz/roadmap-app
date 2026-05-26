@@ -139,6 +139,17 @@ pub fn create_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
                 .id("file:export_png_visible")
                 .build(app)?,
         )
+        .item(&PredefinedMenuItem::separator(app)?)
+        .item(
+            &MenuItemBuilder::new("Strategy SVG…")
+                .id("file:export_strategy_svg")
+                .build(app)?,
+        )
+        .item(
+            &MenuItemBuilder::new("Strategy PNG…")
+                .id("file:export_strategy_png")
+                .build(app)?,
+        )
         .build()?;
 
     let file_menu = file_menu
@@ -180,6 +191,19 @@ pub fn create_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 
     let view_menu = SubmenuBuilder::new(app, "View")
         .item(&appearance_menu)
+        .separator()
+        .item(
+            &MenuItemBuilder::new("Roadmap")
+                .id("view:tab_roadmap")
+                .accelerator("CmdOrCtrl+1")
+                .build(app)?,
+        )
+        .item(
+            &MenuItemBuilder::new("Strategy")
+                .id("view:tab_strategy")
+                .accelerator("CmdOrCtrl+2")
+                .build(app)?,
+        )
         .separator()
         .item(
             &MenuItemBuilder::new("Fit Rows to Window Height")
@@ -241,8 +265,12 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
         "file:export_svg_visible" => emit_to_focused(app, "menu:export_svg_visible", ()),
         "file:export_png" => emit_to_focused(app, "menu:export_png", ()),
         "file:export_png_visible" => emit_to_focused(app, "menu:export_png_visible", ()),
+        "file:export_strategy_svg" => emit_to_focused(app, "menu:export_strategy_svg", ()),
+        "file:export_strategy_png" => emit_to_focused(app, "menu:export_strategy_png", ()),
         "file:print" => emit_to_focused(app, "menu:print", ()),
         "view:fit_to_height" => emit_to_focused(app, "menu:fit_to_height", ()),
+        "view:tab_roadmap" => emit_to_focused(app, "menu:tab", "roadmap"),
+        "view:tab_strategy" => emit_to_focused(app, "menu:tab", "strategy"),
         "view:theme_auto" => app.emit("menu:theme", "auto").unwrap_or(()),
         "view:theme_light" => app.emit("menu:theme", "light").unwrap_or(()),
         "view:theme_dark" => app.emit("menu:theme", "dark").unwrap_or(()),

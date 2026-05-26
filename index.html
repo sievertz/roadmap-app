@@ -35,25 +35,65 @@
     </div>
   </div>
 
-  <div class="gantt-titlebar" id="gantt-titlebar">
-    <button class="gantt-logo-btn" id="gantt-logo-btn" title="Click to change logo">
-      <svg class="gantt-logo" id="gantt-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="2" y="5" width="9" height="3" rx="1" fill="#378ADD"/>
-        <rect x="6" y="10.5" width="12" height="3" rx="1" fill="#1D9E75"/>
-        <rect x="10" y="16" width="10" height="3" rx="1" fill="#BA7517"/>
-      </svg>
-    </button>
-    <h1 class="gantt-title" id="gantt-title">Untitled</h1>
-  </div>
-  <div class="gantt-grid-wrap">
-    <div class="gantt-grid" id="grid"></div>
+  <div class="app-header" id="app-header">
+    <div class="gantt-titlebar" id="gantt-titlebar">
+      <button class="gantt-logo-btn" id="gantt-logo-btn" title="Click to change logo">
+        <svg class="gantt-logo" id="gantt-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="5" width="9" height="3" rx="1" fill="#378ADD"/>
+          <rect x="6" y="10.5" width="12" height="3" rx="1" fill="#1D9E75"/>
+          <rect x="10" y="16" width="10" height="3" rx="1" fill="#BA7517"/>
+        </svg>
+      </button>
+      <h1 class="gantt-title" id="gantt-title">Untitled</h1>
+    </div>
+    <div class="tab-strip" id="tab-strip">
+      <button class="tab-btn active" data-tab="roadmap">Roadmap</button>
+      <button class="tab-btn" data-tab="strategy">Strategy</button>
+    </div>
   </div>
 
-  <div class="add-row">
-    <button class="btn btn-add" id="add-init">+ Add initiative</button>
+  <div class="view-container" data-view="roadmap" id="view-roadmap">
+    <div class="gantt-grid-wrap">
+      <div class="gantt-grid" id="grid"></div>
+    </div>
+
+    <div class="add-row">
+      <button class="btn btn-add" id="add-init">+ Add initiative</button>
+    </div>
+
+    <div class="legend" id="legend"></div>
   </div>
 
-  <div class="legend" id="legend"></div>
+  <div class="view-container" data-view="strategy" id="view-strategy" style="display:none">
+    <div class="strategy-house" id="strategy-house">
+      <div class="strategy-section strategy-vision">
+        <label class="strategy-label">Vision</label>
+        <textarea class="strategy-input strategy-input-headline" id="strategy-vision" placeholder="A clear, ambitious picture of where we want to be"></textarea>
+      </div>
+      <div class="strategy-section strategy-mission">
+        <label class="strategy-label">Mission</label>
+        <textarea class="strategy-input" id="strategy-mission" placeholder="What we do, for whom, and why"></textarea>
+      </div>
+      <div class="strategy-block">
+        <label class="strategy-label">Pillars</label>
+        <div class="strategy-pillars" id="strategy-pillars"></div>
+      </div>
+      <div class="strategy-two-col">
+        <div class="strategy-block">
+          <label class="strategy-label">Opportunities</label>
+          <div class="strategy-cards-col" id="strategy-opportunities"></div>
+        </div>
+        <div class="strategy-block">
+          <label class="strategy-label">Goals</label>
+          <div class="strategy-cards-col" id="strategy-goals"></div>
+        </div>
+      </div>
+      <div class="strategy-section strategy-foundation">
+        <label class="strategy-label">Foundation</label>
+        <textarea class="strategy-input" id="strategy-foundation" placeholder="Values, enablers and operating principles that everything rests on"></textarea>
+      </div>
+    </div>
+  </div>
 
   <div class="edit-modal-backdrop" id="edit-modal-backdrop">
     <div class="edit-modal-content" id="edit-panel">
@@ -237,6 +277,11 @@
           <div class="kbd-row"><span>Redo</span><kbd>⌘⇧Z</kbd></div>
           <div class="kbd-row"><span>Confirm in dialog</span><kbd>⌘⏎</kbd></div>
           <div class="kbd-row"><span>Close dialog</span><kbd>esc</kbd></div>
+        </div>
+        <div class="kbd-section">
+          <h4>View</h4>
+          <div class="kbd-row"><span>Roadmap tab</span><kbd>⌘1</kbd></div>
+          <div class="kbd-row"><span>Strategy tab</span><kbd>⌘2</kbd></div>
         </div>
         <div class="kbd-section">
           <h4>Initiative</h4>
