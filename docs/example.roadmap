@@ -1,5 +1,5 @@
 {
-  "v": 6,
+  "v": 7,
   "config": {
     "startYear": 2026,
     "startMonth": 1,
@@ -173,5 +173,64 @@
       "color": "#D85A30"
     }
   ],
-  "savedAt": "2026-05-21T19:31:27.243Z"
+  "strategy": {
+    "vision": "Be the default platform that small and mid-sized B2B teams reach for when they need to move from spreadsheets to a real system - trusted, fast, and quietly opinionated.",
+    "mission": "We help operations and finance teams replace manual workflows with focused software, so they can spend their time on judgement calls instead of data entry.",
+    "pillars": [
+      {
+        "id": "p1",
+        "title": "Platform consolidation",
+        "description": "Migrate the last legacy services off the v1 monolith and run a single, well-instrumented stack across web, mobile and API."
+      },
+      {
+        "id": "p2",
+        "title": "Self-service depth",
+        "description": "Give customers the data and configuration tools they need to answer their own questions without contacting support."
+      },
+      {
+        "id": "p3",
+        "title": "European market expansion",
+        "description": "Become a credible default in the Nordics and DACH region, with local payment, language and compliance support."
+      }
+    ],
+    "opportunities": [
+      {
+        "id": "o1",
+        "title": "AI-assisted operations",
+        "description": "LLM-backed support, query and reporting features feel close to a step-change in our customers' day-to-day. Worth a focused beta before committing to a full bet."
+      },
+      {
+        "id": "o2",
+        "title": "Adyen marketplace adoption",
+        "description": "Moving to Adyen unlocks bookings via card across more markets and gives us a cleaner integration path with banks. Strong fit with the European expansion pillar."
+      },
+      {
+        "id": "o3",
+        "title": "Embedded analytics for partners",
+        "description": "Several enterprise customers want our charts white-labelled inside their own product. Potential revenue line with limited build cost if we extract our dashboard properly."
+      }
+    ],
+    "goals": [
+      {
+        "id": "g1",
+        "title": "Active monthly customers",
+        "description": "Mix of new sign-ups (60%) and reactivation of dormant accounts (40%). Tracked weekly in the growth dashboard.",
+        "target": "From 12,000 to 20,000 by end of 2027"
+      },
+      {
+        "id": "g2",
+        "title": "Self-service support rate",
+        "description": "Combination of better docs, in-product help, and AI assistant beta. Measured as % of tickets closed by self-help.",
+        "target": "60% of issues resolved without human touch by Q4 2026"
+      },
+      {
+        "id": "g3",
+        "title": "Time-to-value for new customers",
+        "description": "Currently 18 days median. Onboarding flow rework and template library are the main levers.",
+        "target": "Below 7 days from sign-up to first invoice sent"
+      }
+    ],
+    "foundation": "Customer-funded growth before VC milestones. Small, full-stack teams with clear ownership. Decisions made with data when possible, with judgement when not. Boring tech in the core, experiments at the edges."
+  },
+  "savedAt": "2026-05-26T13:15:43.557Z"
 }

@@ -108,6 +108,24 @@ html[data-theme="dark"], html[data-theme="dark"] body { background: #1a1a1a; }
 .strategy-pillar-remove:hover{background:var(--danger-bg);color:var(--danger-text)}
 .strategy-pillar-add{background:transparent;border:1px dashed var(--border-1);border-radius:6px;padding:5px 12px;color:var(--text-3);font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;height:30px;line-height:1;transition:border-color .12s, color .12s, background .12s;align-self:flex-start;justify-self:start}
 .strategy-pillar-add:hover{border-color:var(--text-3);color:var(--text-1);background:var(--bg-soft)}
+/* Dark mode: strategy cards need a lighter background and stronger border so
+   they don't blend into the page chrome */
+@media (prefers-color-scheme: dark){
+  .gantt-root:not([data-theme]) .strategy-section,
+  .gantt-root:not([data-theme]) .strategy-pillar{background:#2e2d2a;border-color:#55554f}
+  .gantt-root:not([data-theme]) .strategy-label{color:#9e9c93}
+  .gantt-root:not([data-theme]) .strategy-input::placeholder,
+  .gantt-root:not([data-theme]) .strategy-pillar-title::placeholder,
+  .gantt-root:not([data-theme]) .strategy-pillar-desc::placeholder,
+  .gantt-root:not([data-theme]) .strategy-goal-target::placeholder{color:#8c8a82}
+}
+.gantt-root[data-theme="dark"] .strategy-section,
+.gantt-root[data-theme="dark"] .strategy-pillar{background:#2e2d2a;border-color:#55554f}
+.gantt-root[data-theme="dark"] .strategy-label{color:#9e9c93}
+.gantt-root[data-theme="dark"] .strategy-input::placeholder,
+.gantt-root[data-theme="dark"] .strategy-pillar-title::placeholder,
+.gantt-root[data-theme="dark"] .strategy-pillar-desc::placeholder,
+.gantt-root[data-theme="dark"] .strategy-goal-target::placeholder{color:#8c8a82}
 .gantt-logo-btn{background:transparent;border:none;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;position:relative;border-radius:4px;transition:background .12s}
 .gantt-logo-btn:hover{background:var(--bg-card)}
 .gantt-logo{width:26px;height:26px;flex-shrink:0;border-radius:4px;display:block}

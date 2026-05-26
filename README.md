@@ -53,6 +53,8 @@ Why this happens: macOS marks downloaded files as quarantined and requires eithe
 - Goals carry an optional target value (e.g. "20% growth, 1M bookings") rendered as a highlighted line on the card
 - Same file stores both the roadmap and its strategy
 
+![Strategy screenshot](docs/strategy-screenshot.png)
+
 ### Files and windows
 - Multi-window: each .roadmap file opens in its own window
 - File association: double-clicking a .roadmap file in Finder opens the app
