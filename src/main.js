@@ -406,7 +406,7 @@ async function loadFromFile(path){
     suppressAutosave = false;
     currentFilePath = path;
     await invoke("add_recent_file", { path });
-    await invoke("refresh_menu");
+    await refreshMenu();
     await updateWindowTitle();
     await registerWindowFile(path);
     render();
@@ -527,6 +527,9 @@ function switchTab(tab){
     view.style.display = view.dataset.view === tab ? '' : 'none';
   });
   if(tab === 'strategy') renderStrategy();
+  // Re-run fit-to-height when returning to the roadmap so row heights match
+  // the now-visible legend/grid (when hidden their offsetHeight is 0)
+  if(tab === 'roadmap') applyFitToHeight();
 }
 
 // Auto-grow a textarea: set its height to fit content + 1 extra row of breathing
@@ -1726,7 +1729,7 @@ async function menuSaveAs(){
     currentFilePath = path;
     await persistToFile(path);
     await invoke("add_recent_file", { path });
-    await invoke("refresh_menu");
+    await refreshMenu();
     await updateWindowTitle();
     await registerWindowFile(path);
   } catch(e){
@@ -2616,6 +2619,9 @@ async function wireMenuEvents(){
   await listen('menu:check_updates', () => checkForUpdates({ verbose: true }));
   await listen('menu:fit_to_height', toggleFitToHeight);
   await listen('menu:hide_completed', toggleHideCompleted);
+  // Rust emits this when it needs JS to rebuild the menu (e.g. after Clear Recent
+  // because the native handler doesn't know the current toggle state)
+  await listen('menu:request_refresh', () => refreshMenu());
   await listen('menu:undo', () => handleUndoShortcut('undo'));
   await listen('menu:redo', () => handleUndoShortcut('redo'));
   await listen('menu:shortcuts', () => {
@@ -2812,9 +2818,20 @@ const HIDE_COMPLETED_KEY = 'roadmap.hideCompleted';
 let hideCompleted = false;
 try { hideCompleted = localStorage.getItem(HIDE_COMPLETED_KEY) === 'true'; } catch(e){}
 
+// Helper: rebuilds the native menu and passes current toggle state so the
+// View menu can render correct check marks next to Fit and Hide Completed.
+async function refreshMenu(){
+  try {
+    await invoke('refresh_menu', { fitToHeight, hideCompleted });
+  } catch(e){
+    console.warn('[Roadmap] refresh_menu failed:', e);
+  }
+}
+
 function toggleHideCompleted(){
   hideCompleted = !hideCompleted;
   try { localStorage.setItem(HIDE_COMPLETED_KEY, hideCompleted ? 'true' : 'false'); } catch(e){}
+  refreshMenu();
   render();
 }
 
@@ -2834,30 +2851,47 @@ function applyFitToHeight(){
     root.style.removeProperty('--row-h');
     return;
   }
-  const numRows = state.initiatives.length;
-  if(numRows === 0){
+  // Skip recalculation when the roadmap view isn't on screen - measuring
+  // hidden elements gives zero values and corrupts the result.
+  if(state.activeTab && state.activeTab !== 'roadmap') return;
+  // Count only the rows that will actually be visible after search + hide-done filters
+  const q = (state.searchQuery || '').trim().toLowerCase();
+  const visibleRows = state.initiatives.filter(init => {
+    if(hideCompleted && init.done) return false;
+    if(q && !(init.label || '').toLowerCase().includes(q)) return false;
+    return true;
+  }).length;
+  if(visibleRows === 0){
     root.style.removeProperty('--row-h');
     return;
   }
-  // Measure the legend dynamically AFTER toggling the class so we get the
-  // compact height that fit-mode CSS produces
+  // Compute available row height by measuring fixed chrome above (top of first
+  // row) and assuming the bottom chrome is the legend + root padding. Using the
+  // window's bottom edge (not the current legend position) avoids a feedback
+  // loop where small rows -> legend high up -> calc thinks little room -> rows stay small.
+  const wrap = document.querySelector('.gantt-grid-wrap');
   const legendEl = document.getElementById('legend');
-  const legendH = legendEl ? legendEl.offsetHeight : 40;
-  // App-header (logo + title + tabs) sits above the grid view in v0.1.20+
-  const appHeaderEl = document.getElementById('app-header');
-  const appHeaderH = appHeaderEl ? appHeaderEl.offsetHeight : 48;
-  // Fixed non-row space inside the grid card: year band + quarter band + month header + padding + borders
-  const FIXED_GRID_HEADER = 110;
-  // Buffer (small margin + breathing room)
-  const BUFFER = 30;
-  const available = window.innerHeight - appHeaderH - FIXED_GRID_HEADER - legendH - BUFFER;
-  const optimal = Math.max(28, Math.min(80, Math.floor(available / numRows)));
+  if(!wrap || !legendEl) return;
+  const firstRow = wrap.querySelector('.row-label');
+  if(!firstRow) return;
+  const rowsTop = firstRow.getBoundingClientRect().top;
+  const legendH = legendEl.offsetHeight || 40;
+  // Bottom chrome between last row and window edge:
+  // grid-wrap border-bottom (1) + legend margin-top in fit-mode (8) + legend itself
+  // + gantt-root padding-bottom (16) + small safety buffer
+  const BOTTOM_CHROME = 30;
+  const available = window.innerHeight - rowsTop - legendH - BOTTOM_CHROME;
+  if(available <= 0) return;
+  // Total visible row slots = initiative rows + 1 ghost "+ Add initiative" row at the end
+  const totalSlots = visibleRows + 1;
+  const optimal = Math.max(32, Math.min(80, Math.floor(available / totalSlots)));
   root.style.setProperty('--row-h', optimal + 'px');
 }
 
 function toggleFitToHeight(){
   fitToHeight = !fitToHeight;
   try { localStorage.setItem(FIT_HEIGHT_KEY, fitToHeight ? 'true' : 'false'); } catch(e){}
+  refreshMenu();
   applyFitToHeight();
 }
 
@@ -2956,6 +2990,8 @@ async function init(){
   loadTheme();
   wireEvents();
   await wireMenuEvents();
+  // Rebuild the menu with check marks reflecting saved toggle state from localStorage
+  await refreshMenu();
 
   // Populate version in About modal from tauri.conf.json
   try {

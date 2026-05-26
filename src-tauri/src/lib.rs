@@ -52,7 +52,9 @@ pub fn run() {
         ])
         .manage(commands::FileWindowMap(Mutex::new(HashMap::new())))
         .setup(|app| {
-            menu::create_menu(app.handle())?;
+            // Initial menu uses defaults. JS calls refresh_menu after loading
+            // its localStorage state so check marks reflect the saved toggles.
+            menu::create_menu(app.handle(), false, false)?;
             Ok(())
         })
         .on_menu_event(|app, event| {

@@ -2,7 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use serde::Deserialize;
-use tauri::menu::{MenuBuilder, MenuEvent, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
+use tauri::menu::{CheckMenuItemBuilder, MenuBuilder, MenuEvent, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 #[derive(Deserialize, Default)]
@@ -31,7 +31,7 @@ fn load_recent_files<R: Runtime>(app: &AppHandle<R>) -> Vec<String> {
     files.into_iter().filter(|p| std::path::Path::new(p).exists()).collect()
 }
 
-pub fn create_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
+pub fn create_menu<R: Runtime>(app: &AppHandle<R>, fit_to_height: bool, hide_completed: bool) -> tauri::Result<()> {
     let app_menu = SubmenuBuilder::new(app, "Roadmap")
         .item(
             &MenuItemBuilder::new("About Roadmap")
@@ -206,13 +206,15 @@ pub fn create_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         )
         .separator()
         .item(
-            &MenuItemBuilder::new("Fit Rows to Window Height")
+            &CheckMenuItemBuilder::new("Fit Rows to Window Height")
                 .id("view:fit_to_height")
+                .checked(fit_to_height)
                 .build(app)?,
         )
         .item(
-            &MenuItemBuilder::new("Hide Completed Initiatives")
+            &CheckMenuItemBuilder::new("Hide Completed Initiatives")
                 .id("view:hide_completed")
+                .checked(hide_completed)
                 .build(app)?,
         )
         .separator()
@@ -252,10 +254,12 @@ pub fn create_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     Ok(())
 }
 
-// Tauri command - rebuilds the menu (called after add_recent_file to refresh Open Recent)
+// Tauri command - rebuilds the menu (called after add_recent_file to refresh Open Recent
+// or when view-toggle state changes). Accepts the current toggle state from JS so the
+// View menu can show check marks next to active items.
 #[tauri::command]
-pub fn refresh_menu<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
-    create_menu(&app).map_err(|e| e.to_string())
+pub fn refresh_menu<R: Runtime>(app: AppHandle<R>, fit_to_height: Option<bool>, hide_completed: Option<bool>) -> Result<(), String> {
+    create_menu(&app, fit_to_height.unwrap_or(false), hide_completed.unwrap_or(false)).map_err(|e| e.to_string())
 }
 
 pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
@@ -282,7 +286,8 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
         "view:theme_dark" => app.emit("menu:theme", "dark").unwrap_or(()),
         "file:clear_recent" => {
             let _ = clear_recent_files_internal(app);
-            let _ = create_menu(app);
+            // Re-emit a refresh request so JS can rebuild with current toggle state
+            let _ = app.emit("menu:request_refresh", ());
         }
         "app:about" => emit_to_focused(app, "menu:about", ()),
         "help:check_updates" => emit_to_focused(app, "menu:check_updates", ()),
