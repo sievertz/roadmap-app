@@ -338,6 +338,8 @@ function applyLoadedData(data){
         delete init.offsets;
       }
       if(!init.position) init.position = {s:0, e:0};
+      // Normalise done flag (optional - defaults to false for backward compat)
+      init.done = init.done === true;
       // Convert quarter-index positions to month-index (each Q = 3 months)
       if(isQuarterFormat){
         init.position.s = init.position.s * 3;
@@ -846,6 +848,23 @@ function renderGrid(){
     }, 0);
   });
   blank.appendChild(searchInput);
+  // Show a toggle in the search cell when any initiatives are marked as done.
+  // Clicking flips the Hide Completed setting. Hidden when nothing is done so
+  // the search cell stays compact for fresh roadmaps.
+  const doneCount = state.initiatives.filter(i => i.done).length;
+  if(doneCount > 0){
+    const hideBtn = document.createElement('button');
+    hideBtn.className = 'hide-completed-toggle' + (hideCompleted ? ' active' : '');
+    hideBtn.title = hideCompleted
+      ? 'Show ' + doneCount + ' completed initiative' + (doneCount === 1 ? '' : 's')
+      : 'Hide ' + doneCount + ' completed initiative' + (doneCount === 1 ? '' : 's');
+    hideBtn.textContent = hideCompleted ? 'Show done (' + doneCount + ')' : 'Hide done (' + doneCount + ')';
+    hideBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      toggleHideCompleted();
+    });
+    blank.appendChild(hideBtn);
+  }
   grid.appendChild(blank);
 
   let yearIdx = 0;
@@ -870,6 +889,8 @@ function renderGrid(){
   state.initiatives.forEach((init, idx) => {
     // Filter: hide rows that don't match the search query
     if(q && !(init.label || '').toLowerCase().includes(q)) return;
+    // Filter: hide completed initiatives when the View toggle is on
+    if(hideCompleted && init.done) return;
 
     const isDragging = state.reorderDragId === init.id;
     const isDropTarget = state.reorderDropTarget === init.id;
@@ -880,7 +901,7 @@ function renderGrid(){
     lc.className = 'lbl-cell';
     const li = document.createElement('div');
     const isRenaming = renamingId === init.id;
-    li.className = 'row-label' + (state.selected === init.id ? ' selected' : '') + (isDragging ? ' dragging-row' : '') + (dropClass ? ' ' + dropClass : '');
+    li.className = 'row-label' + (state.selected === init.id ? ' selected' : '') + (isDragging ? ' dragging-row' : '') + (dropClass ? ' ' + dropClass : '') + (init.done ? ' done' : '');
     const num = document.createElement('span');
     num.className = 'row-number' + (init.adjustable !== false ? ' drag-handle' : '');
     num.textContent = (idx + 1);
@@ -920,6 +941,22 @@ function renderGrid(){
       t.className = 'lbl-tag';
       t.textContent = init.weeks + 'v';
       li.appendChild(t);
+    }
+    // Done toggle button (visible on hover, persistent when done)
+    if(!isRenaming){
+      const doneBtn = document.createElement('button');
+      doneBtn.className = 'row-done-toggle' + (init.done ? ' active' : '');
+      doneBtn.textContent = '✓';
+      doneBtn.title = init.done ? 'Mark as not done' : 'Mark as done';
+      doneBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        e.preventDefault();
+        captureSnapshot();
+        init.done = !init.done;
+        render();
+      });
+      doneBtn.addEventListener('mousedown', e => e.stopPropagation()); // don't start drag
+      li.appendChild(doneBtn);
     }
     // Row delete button (visible on hover)
     if(init.adjustable !== false && !isRenaming){
@@ -980,6 +1017,7 @@ function renderGrid(){
         const cls = ['bar'];
         if(init.dashed) cls.push('dashed');
         if(init.adjustable !== false) cls.push('adj');
+        if(init.done) cls.push('done');
         if(dragState && dragState.initId === init.id && dragState.dragged) cls.push('dragging');
         b.className = cls.join(' ');
         if(legendItem){
@@ -1471,6 +1509,7 @@ function renderEditPanel(){
   document.getElementById('jira-open').disabled = !/^https?:\/\/\S+/i.test(jiraVal.trim());
   document.getElementById('deps-input').value = init.dependencies || '';
   document.getElementById('desc-input').value = init.description || '';
+  document.getElementById('done-input').checked = !!init.done;
 
   const typeSelect = document.getElementById('type-select');
   typeSelect.innerHTML = '';
@@ -1536,6 +1575,7 @@ function applyChanges(){
   init.jira = document.getElementById('jira-input').value;
   init.dependencies = document.getElementById('deps-input').value;
   init.description = document.getElementById('desc-input').value;
+  init.done = document.getElementById('done-input').checked;
   const lg = legendFor(init.type);
   init.dashed = lg && lg.dashed ? true : false;
   state.selected = null;
@@ -1891,7 +1931,9 @@ function generateExportSvg(opts){
   let ms = months();
   let ys = years();
   let qBands = quarterBands();
-  let initiatives = state.initiatives;
+  // Respect the "Hide completed" toggle in the export too - if the user
+  // has it on in the app, they don't want done initiatives in the export.
+  let initiatives = hideCompleted ? state.initiatives.filter(i => !i.done) : state.initiatives;
 
   // Crop to visible area if requested
   if(visibleOnly){
@@ -2078,7 +2120,9 @@ function generateExportSvg(opts){
     const labelLeft = rowNumXEnd + 8;
     const labelMaxW = LABEL_W - (labelLeft - gridX) - (tagW ? tagW + 10 : 0) - 12;
     const labelTrunc = svgTruncate(init.label || '', labelMaxW, 12, '400');
-    parts.push(`<text x="${labelLeft}" y="${ry + ROW_H / 2}" font-size="12" fill="${C.text1}" dominant-baseline="central">${svgEscape(labelTrunc)}</text>`);
+    const labelFill = init.done ? C.text3 : C.text1;
+    const labelDeco = init.done ? ' text-decoration="line-through"' : '';
+    parts.push(`<text x="${labelLeft}" y="${ry + ROW_H / 2}" font-size="12" fill="${labelFill}" dominant-baseline="central"${labelDeco}>${svgEscape(labelTrunc)}</text>`);
 
     if(tagText){
       const tagX = gridX + LABEL_W - 12 - tagW;
@@ -2103,19 +2147,25 @@ function generateExportSvg(opts){
       const barW = (p.e - p.s + 1) * MONTH_W - 8;
       const barH = ROW_H - 12;
       const barTxtMax = barW - 20;
+      // Done initiatives render at reduced opacity (mirrors the app)
+      const groupOpen = init.done ? `<g opacity="0.45">` : '';
+      const groupClose = init.done ? `</g>` : '';
+      const textDeco = init.done ? ' text-decoration="line-through"' : '';
 
       if(init.dashed){
-        parts.push(`<rect x="${barX}" y="${barY}" width="${barW}" height="${barH}" rx="5" fill="none" stroke="${barColor}" stroke-width="1.5" stroke-dasharray="5 3"/>`);
+        parts.push(groupOpen + `<rect x="${barX}" y="${barY}" width="${barW}" height="${barH}" rx="5" fill="none" stroke="${barColor}" stroke-width="1.5" stroke-dasharray="5 3"/>`);
         const t = svgTruncate(init.label || '', barTxtMax, 11, '500');
         if(t){
-          parts.push(`<text x="${barX + 10}" y="${ry + ROW_H / 2}" font-size="11" font-weight="500" font-style="italic" fill="${barColor}" dominant-baseline="central">${svgEscape(t)}</text>`);
+          parts.push(`<text x="${barX + 10}" y="${ry + ROW_H / 2}" font-size="11" font-weight="500" font-style="italic" fill="${barColor}" dominant-baseline="central"${textDeco}>${svgEscape(t)}</text>`);
         }
+        parts.push(groupClose);
       } else {
-        parts.push(`<rect x="${barX}" y="${barY}" width="${barW}" height="${barH}" rx="5" fill="${barColor}"/>`);
+        parts.push(groupOpen + `<rect x="${barX}" y="${barY}" width="${barW}" height="${barH}" rx="5" fill="${barColor}"/>`);
         const t = svgTruncate(init.label || '', barTxtMax, 11, '600');
         if(t){
-          parts.push(`<text x="${barX + 10}" y="${ry + ROW_H / 2}" font-size="11" font-weight="600" fill="#ffffff" dominant-baseline="central">${svgEscape(t)}</text>`);
+          parts.push(`<text x="${barX + 10}" y="${ry + ROW_H / 2}" font-size="11" font-weight="600" fill="#ffffff" dominant-baseline="central"${textDeco}>${svgEscape(t)}</text>`);
         }
+        parts.push(groupClose);
       }
 
       // Dependency dot (small circle in top-right corner)
@@ -2565,6 +2615,7 @@ async function wireMenuEvents(){
   });
   await listen('menu:check_updates', () => checkForUpdates({ verbose: true }));
   await listen('menu:fit_to_height', toggleFitToHeight);
+  await listen('menu:hide_completed', toggleHideCompleted);
   await listen('menu:undo', () => handleUndoShortcut('undo'));
   await listen('menu:redo', () => handleUndoShortcut('redo'));
   await listen('menu:shortcuts', () => {
@@ -2753,6 +2804,18 @@ function startRoadmapTitleRename(){
     if(e.key === 'Escape'){ e.preventDefault(); cancel(); }
   });
   input.addEventListener('blur', commit);
+}
+
+// ----- Hide completed initiatives -----
+
+const HIDE_COMPLETED_KEY = 'roadmap.hideCompleted';
+let hideCompleted = false;
+try { hideCompleted = localStorage.getItem(HIDE_COMPLETED_KEY) === 'true'; } catch(e){}
+
+function toggleHideCompleted(){
+  hideCompleted = !hideCompleted;
+  try { localStorage.setItem(HIDE_COMPLETED_KEY, hideCompleted ? 'true' : 'false'); } catch(e){}
+  render();
 }
 
 // ----- Fit rows to window height -----

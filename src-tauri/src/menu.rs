@@ -210,6 +210,11 @@ pub fn create_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
                 .id("view:fit_to_height")
                 .build(app)?,
         )
+        .item(
+            &MenuItemBuilder::new("Hide Completed Initiatives")
+                .id("view:hide_completed")
+                .build(app)?,
+        )
         .separator()
         .item(&PredefinedMenuItem::fullscreen(app, None)?)
         .build()?;
@@ -269,6 +274,7 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
         "file:export_strategy_png" => emit_to_focused(app, "menu:export_strategy_png", ()),
         "file:print" => emit_to_focused(app, "menu:print", ()),
         "view:fit_to_height" => emit_to_focused(app, "menu:fit_to_height", ()),
+        "view:hide_completed" => emit_to_focused(app, "menu:hide_completed", ()),
         "view:tab_roadmap" => emit_to_focused(app, "menu:tab", "roadmap"),
         "view:tab_strategy" => emit_to_focused(app, "menu:tab", "strategy"),
         "view:theme_auto" => app.emit("menu:theme", "auto").unwrap_or(()),

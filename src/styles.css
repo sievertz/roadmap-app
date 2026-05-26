@@ -353,14 +353,34 @@ body:has(.welcome.active) .gantt-actions{display:none}
 .row-label:hover .row-remove{opacity:0.55}
 .row-remove:hover{opacity:1 !important;color:var(--danger-text);background:var(--danger-bg)}
 
+/* Done toggle button: ✓ visible on hover, persistent green when active */
+.row-done-toggle{background:transparent;border:1px solid var(--border-1);color:var(--text-3);cursor:pointer;font-size:11px;padding:0;line-height:1;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-family:inherit;opacity:0;transition:opacity .12s, color .12s, background .12s, border-color .12s;flex-shrink:0}
+.row-label:hover .row-done-toggle{opacity:0.55}
+.row-done-toggle:hover{opacity:1 !important;color:#1D9E75;border-color:#1D9E75;background:rgba(29,158,117,0.1)}
+.row-done-toggle.active{opacity:1;color:#ffffff;background:#1D9E75;border-color:#1D9E75}
+.row-done-toggle.active:hover{background:#168860;border-color:#168860}
+
+/* Done initiative styling: faded bar, strikethrough label */
+.row-label.done .lbl-text{text-decoration:line-through;color:var(--text-3)}
+.bar.done{opacity:0.45}
+.bar.done .bar-text{text-decoration:line-through}
+
+/* Checkbox label in edit modal */
+.checkbox-label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-1);user-select:none}
+.checkbox-label input[type="checkbox"]{width:16px;height:16px;cursor:pointer;margin:0}
+
 /* Category select: small colored swatch indicates the selected category's colour */
 .category-select-wrapper{display:flex;align-items:center;gap:8px}
 .category-color-swatch{width:16px;height:16px;border-radius:3px;flex-shrink:0;border:1px solid rgba(0,0,0,0.08)}
 .category-select-wrapper select{flex:1;min-width:0}
 
 /* Search input in sticky-col header (replaces 'Initiative' label) */
-.gh.sticky-col.search-cell{padding:0;text-align:center}
-.search-input{width:100%;height:100%;border:none;background:transparent;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-2);font-family:inherit;letter-spacing:.02em;text-transform:uppercase;outline:none;text-align:center}
+.gh.sticky-col.search-cell{padding:0;text-align:center;display:flex;align-items:center;gap:4px}
+.search-input{flex:1;min-width:0;height:100%;border:none;background:transparent;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-2);font-family:inherit;letter-spacing:.02em;text-transform:uppercase;outline:none;text-align:center}
+.hide-completed-toggle{background:transparent;border:1px solid var(--border-1);color:var(--text-3);cursor:pointer;font-size:10px;font-weight:500;padding:3px 7px;border-radius:10px;font-family:inherit;white-space:nowrap;margin-right:6px;flex-shrink:0;transition:color .12s, border-color .12s, background .12s}
+.hide-completed-toggle:hover{color:var(--text-1);border-color:var(--text-3);background:var(--bg-card)}
+.hide-completed-toggle.active{color:#1D9E75;border-color:#1D9E75;background:rgba(29,158,117,0.08)}
+.hide-completed-toggle.active:hover{background:rgba(29,158,117,0.15)}
 .search-input::placeholder{color:var(--text-2);opacity:1;text-transform:uppercase}
 .search-input:focus{background:var(--bg-card);text-transform:none;font-weight:500;letter-spacing:0;color:var(--text-1);text-align:left}
 .search-input:focus::placeholder{text-transform:none;font-weight:400;color:var(--text-3);opacity:0.7}
