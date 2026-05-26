@@ -2876,15 +2876,16 @@ function applyFitToHeight(){
   if(!firstRow) return;
   const rowsTop = firstRow.getBoundingClientRect().top;
   const legendH = legendEl.offsetHeight || 40;
-  // Bottom chrome between last row and window edge:
-  // grid-wrap border-bottom (1) + legend margin-top in fit-mode (8) + legend itself
-  // + gantt-root padding-bottom (16) + small safety buffer
-  const BOTTOM_CHROME = 30;
+  // Bottom chrome between rows and window edge: grid-wrap border-bottom (1) +
+  // horizontal scrollbar (~14) + legend margin-top (8) + gantt-root padding-bottom (16)
+  // + small safety buffer. NOTE: padding is already accounted for since the global
+  // `* { box-sizing: border-box }` rule means --row-h equals total visual row height.
+  const BOTTOM_CHROME = 44;
   const available = window.innerHeight - rowsTop - legendH - BOTTOM_CHROME;
   if(available <= 0) return;
-  // Total visible row slots = initiative rows + 1 ghost "+ Add initiative" row at the end
+  // Total visible row slots = initiative rows + 1 ghost "+ Add initiative" row
   const totalSlots = visibleRows + 1;
-  const optimal = Math.max(32, Math.min(80, Math.floor(available / totalSlots)));
+  const optimal = Math.max(28, Math.min(80, Math.floor(available / totalSlots)));
   root.style.setProperty('--row-h', optimal + 'px');
 }
 
